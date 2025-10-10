@@ -36,6 +36,8 @@ class Objectif(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
     periode = models.ForeignKey(Periode, on_delete=models.CASCADE)
     est_valide = models.BooleanField(default=False)  # validé par le N+1
-
+    est_rejete = models.BooleanField(default=False)
+    commentaire_rejet = models.TextField(blank=True, null=True)
+    date_validation = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return f"{self.libelle[:40]}..."
