@@ -34,7 +34,7 @@ AUTH_USER_MODEL = 'accounts.Agent'
 INSTALLED_APPS = [
     'rest_framework',
     'accounts',
-
+    'performance',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

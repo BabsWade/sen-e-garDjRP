@@ -32,5 +32,7 @@ urlpatterns = [
     # App accounts
     path('api/accounts/', include('accounts.urls')),  # à créer dans l'étape suivante
 
+    path('api/performance/', include('performance.urls')),
+
 ]
 

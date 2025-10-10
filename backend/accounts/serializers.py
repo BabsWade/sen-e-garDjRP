@@ -8,7 +8,7 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Agent
-        fields = ('matricule', 'email', 'nom', 'prenom', 'password', 'password2', 'role')
+        fields = ('matricule', 'email', 'nom', 'prenom', 'password', 'password2')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -18,4 +18,7 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password2')
         user = Agent.objects.create_user(**validated_data)
+        user.role = 'AGENT'  # Attribution automatique
+        user.save()
         return user
+
