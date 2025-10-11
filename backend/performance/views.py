@@ -1,13 +1,17 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions
-from .models import Periode, Service, Objectif
-from .serializers import PeriodeSerializer, ServiceSerializer, ObjectifSerializer
+from .models import Periode, Service, Objectif, Realisation
+from .serializers import PeriodeSerializer, ServiceSerializer, ObjectifSerializer, RealisationSerializer
 from rest_framework.permissions import BasePermission
 from .permissions import ObjectifAccessPermission
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+
 class IsDRH(BasePermission):
     def has_permission(self, request, view):
         return request.user.role == "DRH"
@@ -27,6 +31,58 @@ class ServiceViewSet(viewsets.ModelViewSet):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated, IsDRH]
+
+class RealisationViewSet(viewsets.ModelViewSet):
+
+    @action(detail=True, methods=['post'], url_path='valider')
+    def valider(self, request, pk=None):
+        realisation = self.get_object()
+        user = request.user
+
+        if realisation.objectif.agent.superieur != user:
+            return Response({'detail': "Non autorisé."}, status=403)
+
+        realisation.est_valide = True
+        realisation.est_rejete = False
+        realisation.commentaire_rejet = None
+        realisation.date_validation = timezone.now()
+        realisation.save()
+        return Response({'status': 'Réalisation validée'})
+
+    @action(detail=True, methods=['post'], url_path='feedback')
+    def donner_feedback(self, request, pk=None):
+        realisation = self.get_object()
+        user = request.user
+
+        if realisation.objectif.agent.superieur != user:
+            return Response({'detail': "Non autorisé."}, status=403)
+
+        feedback = request.data.get('feedback')
+        if not feedback:
+            return Response({'detail': 'Feedback requis.'}, status=400)
+
+        realisation.feedback = feedback
+        realisation.save()
+        return Response({'status': 'Feedback enregistré'})
+
+    @action(detail=True, methods=['post'], url_path='rejeter')
+    def rejeter(self, request, pk=None):
+        realisation = self.get_object()
+        user = request.user
+
+        if realisation.objectif.agent.superieur != user:
+            return Response({'detail': "Non autorisé."}, status=403)
+
+        commentaire = request.data.get('commentaire')
+        if not commentaire:
+            return Response({'detail': 'Un commentaire est requis.'}, status=400)
+
+        realisation.est_valide = False
+        realisation.est_rejete = True
+        realisation.commentaire_rejet = commentaire
+        realisation.save()
+        return Response({'status': 'Réalisation rejetée'})
+
 
 
 class ObjectifViewSet(viewsets.ModelViewSet):

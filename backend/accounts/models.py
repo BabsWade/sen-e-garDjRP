@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
-# Les rôles disponibles
 ROLES = (
     ('AGENT', 'Agent Public'),
     ('RESPONSABLE_N1', 'Responsable Hiérarchique'),
@@ -35,11 +34,9 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLES)
     date_embauche = models.DateField(null=True, blank=True)
 
-    # Organisation
     service = models.ForeignKey('Service', on_delete=models.SET_NULL, null=True, blank=True)
     responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Statuts
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
@@ -51,7 +48,12 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.matricule} - {self.nom} {self.prenom}"
 
-# Service (entité liée à l’organisation)
+    def get_full_name(self):
+        return f"{self.nom} {self.prenom}"
+
+    def get_short_name(self):
+        return self.prenom
+
 class Service(models.Model):
     nom_service = models.CharField(max_length=100, unique=True)
     code_programme_budgetaire = models.CharField(max_length=15, unique=True)

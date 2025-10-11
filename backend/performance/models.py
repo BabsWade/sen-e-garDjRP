@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import Agent  # Import de ton modèle Agent
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Periode(models.Model):
@@ -26,6 +27,13 @@ class Objectif(models.Model):
         ('Délai', 'Délai'),
     ]
 
+    @property
+    def taux_avancement_total(self):
+        realisations = self.realisations.all()
+        if not realisations.exists():
+            return 0
+        return sum(r.taux_avancement for r in realisations) // realisations.count()
+
     libelle = models.TextField()
     type_kpi = models.CharField(max_length=30, choices=TYPE_KPI_CHOICES)
     cible = models.CharField(max_length=100)
@@ -41,3 +49,23 @@ class Objectif(models.Model):
     date_validation = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return f"{self.libelle[:40]}..."
+class Realisation(models.Model):
+    objectif = models.ForeignKey(Objectif, on_delete=models.CASCADE, related_name="realisations")
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    description = models.TextField()
+    taux_avancement = models.PositiveIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    preuve = models.FileField(upload_to='preuves/', null=True, blank=True)
+    est_valide = models.BooleanField(default=False)
+    est_rejete = models.BooleanField(default=False)
+    commentaire_rejet = models.TextField(null=True, blank=True)
+    feedback = models.TextField(null=True, blank=True)  # Feedback du N+1
+    date_soumission = models.DateTimeField(auto_now_add=True)
+    date_validation = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_soumission']
+
+    def __str__(self):
+        return f"Réalisation de {self.agent} pour {self.objectif}"
