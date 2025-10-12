@@ -1,5 +1,4 @@
 from django.db import models
-from accounts.models import Agent  # Import de ton modèle Agent
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -15,6 +14,10 @@ class Periode(models.Model):
 class Service(models.Model):
     nom_service = models.CharField(max_length=100, unique=True)
     code_programme_budgetaire = models.CharField(max_length=15, unique=True)
+
+    def get_agents(self):
+        from accounts.models import Agent  # Import à la demande
+        return Agent.objects.filter(service=self)
 
     def __str__(self):
         return self.nom_service
@@ -41,7 +44,7 @@ class Objectif(models.Model):
     annee = models.IntegerField()
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)  # Utilisation du nom en chaîne
     periode = models.ForeignKey(Periode, on_delete=models.CASCADE)
     est_valide = models.BooleanField(default=False)  # validé par le N+1
     est_rejete = models.BooleanField(default=False)
@@ -51,7 +54,7 @@ class Objectif(models.Model):
         return f"{self.libelle[:40]}..."
 class Realisation(models.Model):
     objectif = models.ForeignKey(Objectif, on_delete=models.CASCADE, related_name="realisations")
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)  # Utilisation du nom en chaîne
     description = models.TextField()
     taux_avancement = models.PositiveIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)]

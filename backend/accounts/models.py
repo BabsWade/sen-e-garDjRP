@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+# accounts/models.py
+from performance.models import Service  # Assurez-vous d'importer correctement Service depuis l'application performance
+
 
 ROLES = (
     ('AGENT', 'Agent Public'),
@@ -34,7 +37,8 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLES)
     date_embauche = models.DateField(null=True, blank=True)
 
-    service = models.ForeignKey('Service', on_delete=models.SET_NULL, null=True, blank=True)
+    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True)  # Permet à 'service' d'être null
+
     responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
@@ -54,9 +58,4 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.prenom
 
-class Service(models.Model):
-    nom_service = models.CharField(max_length=100, unique=True)
-    code_programme_budgetaire = models.CharField(max_length=15, unique=True)
 
-    def __str__(self):
-        return self.nom_service

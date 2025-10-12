@@ -84,60 +84,76 @@ class RealisationViewSet(viewsets.ModelViewSet):
         return Response({'status': 'Réalisation rejetée'})
 
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from .models import Objectif
+from .serializers import ObjectifSerializer
+from rest_framework import viewsets
+from .permissions import ObjectifAccessPermission
+
 
 class ObjectifViewSet(viewsets.ModelViewSet):
+    # Les permissions sont bien définies, on peut ici spécifier l'accès selon le rôle de l'utilisateur.
+    permission_classes = [IsAuthenticated, ObjectifAccessPermission]
+    serializer_class = ObjectifSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'DRH':
+            return Objectif.objects.all()  # Le DRH a accès à tous les objectifs
+        elif user.role == 'RESPONSABLE_N1':
+            return Objectif.objects.filter(
+                agent__responsable_matricule=user.matricule)  # Accès aux objectifs des subordonnés
+        elif user.role == 'AGENT':
+            return Objectif.objects.filter(agent=user)  # Un agent peut voir ses propres objectifs
+        return Objectif.objects.none()
+
+    # Action pour rejeter un objectif
     @action(detail=True, methods=['post'], url_path='rejeter', url_name='rejeter_objectif')
     def rejeter_objectif(self, request, pk=None):
         objectif = self.get_object()
         user = request.user
 
+        # Vérifie si l'utilisateur est un responsable N1
         if user.role != 'RESPONSABLE_N1':
             return Response({'detail': "Permission refusée."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Vérifie que l'utilisateur est bien le N+1 de l'agent associé à l'objectif
         if objectif.agent.responsable_matricule != user.matricule:
             return Response({'detail': "Vous n'êtes pas le N+1 de cet agent."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Vérifie la présence d'un commentaire de rejet
         commentaire = request.data.get('commentaire_rejet', '').strip()
-
         if not commentaire:
             return Response({'detail': "Le commentaire de rejet est obligatoire."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Met à jour l'objectif pour le marquer comme rejeté
         objectif.est_rejete = True
         objectif.commentaire_rejet = commentaire
-        objectif.est_valide = False  # s'assurer qu’il ne soit pas marqué comme validé
-        objectif.date_validation = timezone.now()
-        objectif.save()
+        objectif.est_valide = False  # S'assurer que l'objectif n'est pas validé
+        objectif.date_validation = timezone.now()  # Met la date de validation
+        objectif.save()  # Sauvegarde l'objectif
 
         return Response({'detail': 'Objectif rejeté avec succès.'}, status=status.HTTP_200_OK)
-    serializer_class = ObjectifSerializer
-    permission_classes = [permissions.IsAuthenticated, ObjectifAccessPermission]
 
-    def get_queryset(self):
-        user = self.request.user
-
-
-
-        if user.role == 'DRH':
-            return Objectif.objects.all()
-
-        elif user.role == 'RESPONSABLE_N1':
-            # Objectifs de ses subordonnés
-            return Objectif.objects.filter(agent__responsable_matricule=user.matricule)
-
-        elif user.role == 'AGENT':
-            return Objectif.objects.filter(agent=user)
-
-        return Objectif.objects.none()
+    def perform_create(self, serializer):
+        # Associer automatiquement l'agent connecté à l'objectif
+        serializer.save(agent=self.request.user)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
 
+        # Si l'objectif est validé, un agent ne peut pas le modifier
         if instance.est_valide and request.user.role == 'AGENT':
             return Response(
                 {'detail': "Objectif validé. Vous ne pouvez plus le modifier."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        # Si l'objectif est rejeté, il doit être reformulé par l'agent
         if instance.est_rejete and request.user.role != 'AGENT':
             return Response(
                 {'detail': "Objectif déjà rejeté. Il doit être reformulé par l'agent."},
@@ -146,7 +162,3 @@ class ObjectifViewSet(viewsets.ModelViewSet):
 
         return super().update(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
-        # Associer automatiquement l’agent connecté
-        serializer.save(agent=self.request.user)
-# Create your views here.

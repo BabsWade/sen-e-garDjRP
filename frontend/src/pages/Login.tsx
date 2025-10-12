@@ -24,19 +24,30 @@ const Login: React.FC = () => {
         password,
       });
 
+      // Stockage des tokens dans localStorage
       localStorage.setItem('access', response.data.access);
       localStorage.setItem('refresh', response.data.refresh);
 
+      // Vérification de la réponse du backend pour récupérer le rôle
       const userResp = await axios.get<UserResponse>('http://localhost:8000/api/accounts/me/', {
         headers: { Authorization: `Bearer ${response.data.access}` }
       });
 
       const role = userResp.data.role;
+      console.log('Role:', role);  // Déboguer le rôle retourné par le backend
 
-      if (role === 'AGENT') navigate('/agent-dashboard');
-      else if (role === 'RESPONSABLE_N1') navigate('/n1-dashboard');
-      else if (role === 'DRH') navigate('/drh-dashboard');
-      else navigate('/admin-dashboard');
+      // Rediriger en fonction du rôle
+      if (role === 'AGENT') {
+        navigate('/agent-dashboard');
+      } else if (role === 'RESPONSABLE_N1') {
+        navigate('/n1-dashboard');
+      } else if (role === 'DRH') {
+        navigate('/drh-dashboard');
+      } else if (role === 'ADMIN') {
+        navigate('/admin-dashboard');
+      } else {
+        alert('Rôle inconnu');
+      }
     } catch (error) {
       alert('Échec de connexion');
     }
