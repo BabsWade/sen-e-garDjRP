@@ -28,6 +28,7 @@ class ObjectifSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    taux_avancement = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
 
     class Meta:
         model = Objectif
@@ -37,6 +38,7 @@ class ObjectifSerializer(serializers.ModelSerializer):
             'est_valide', 'est_rejete', 'commentaire_rejet', 'date_validation',
             'competences_comportementales',
             'indicateur', 'indicateur_id',
+            'taux_avancement',
         ]
         # selon ta logique, tu peux rendre certains champs read_only
-        read_only_fields = ['agent', 'service', 'est_valide', 'date_validation']
+        read_only_fields = ['agent', 'service', 'est_valide', 'date_validation', 'taux_avancement']

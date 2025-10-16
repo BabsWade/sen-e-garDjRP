@@ -51,6 +51,7 @@ class Objectif(models.Model):
     poids = models.DecimalField(max_digits=5, decimal_places=2)
     annee = models.IntegerField()
     type_objectif = models.CharField(max_length=30, choices=[('Individuel','Individuel'), ('Collectif','Collectif')], default='Individuel')
+    taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # nouveau champ
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
     agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)
@@ -60,6 +61,7 @@ class Objectif(models.Model):
     commentaire_rejet = models.TextField(blank=True, null=True)
     date_validation = models.DateTimeField(null=True, blank=True)
     competences_comportementales = models.TextField(blank=True, null=True)
+    taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
 
     indicateur = models.ForeignKey(
         Indicateur,
@@ -71,7 +73,8 @@ class Objectif(models.Model):
 
     @property
     def taux_avancement_total(self):
-        realisations = self.realisations.all()
+        realisations = self.realisations.filter(est_valide=True)
+
         if not realisations.exists():
             return 0
         return sum(r.taux_avancement for r in realisations) // realisations.count()
