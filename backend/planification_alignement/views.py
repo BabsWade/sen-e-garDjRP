@@ -21,7 +21,8 @@ from .serializers import ObjectifSerializer
 from rest_framework import viewsets
 from .permissions import ObjectifAccessPermission
 from rest_framework.views import APIView
-
+from .models import Indicateur
+from .serializers import IndicateurSerializer
 
 class IsDRH(BasePermission):
     def has_permission(self, request, view):
@@ -106,7 +107,8 @@ class ObjectifViewSet(viewsets.ModelViewSet):
 
         serializer.save(
             agent=agent,
-            service=service
+            service=service,
+            annee = serializer.validated_data['periode'].date_debut.year
         )
 
     def update(self, request, *args, **kwargs):
@@ -151,3 +153,7 @@ class PerformanceAPIView(APIView):
 
         return Response({"performance_moyenne": moyenne})
 
+class IndicateurViewSet(viewsets.ModelViewSet):
+    queryset = Indicateur.objects.all()
+    serializer_class = IndicateurSerializer
+    permission_classes = [IsAuthenticated]

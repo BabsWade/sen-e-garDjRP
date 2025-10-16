@@ -1,5 +1,19 @@
-# planification_alignement/models.py
 from django.db import models
+
+class Indicateur(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    libelle = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    TYPE_KPI_CHOICES = [
+        ('Quantitatif', 'Quantitatif'),
+        ('Qualitatif', 'Qualitatif'),
+        ('Délai', 'Délai'),
+    ]
+    type_kpi = models.CharField(max_length=30, choices=TYPE_KPI_CHOICES)
+    cible = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.code} — {self.libelle}"
 
 
 class Periode(models.Model):
@@ -10,12 +24,12 @@ class Periode(models.Model):
     def __str__(self):
         return self.libelle_periode
 
+
 class Service(models.Model):
     nom_service = models.CharField(max_length=100, unique=True)
     code_programme_budgetaire = models.CharField(max_length=15, unique=True)
 
     def get_agents(self):
-        # Déplacer l'importation à l'intérieur de la méthode pour éviter l'import circulaire
         from accounts.models import Agent
         return Agent.objects.filter(service=self)
 
@@ -23,36 +37,37 @@ class Service(models.Model):
         return self.nom_service
 
 
-
 class Objectif(models.Model):
+    # ton choix d’anciennes champs ici...
     TYPE_KPI_CHOICES = [
         ('Quantitatif', 'Quantitatif'),
         ('Qualitatif', 'Qualitatif'),
         ('Délai', 'Délai'),
     ]
-
-    TYPE_OBJECTIF_CHOICES = [
-        ('Individuel', 'Individuel'),
-        ('Collectif', 'Collectif'),
-    ]
-
     libelle = models.TextField()
-    type_kpi = models.CharField(max_length=30, choices=TYPE_KPI_CHOICES)
-    cible = models.CharField(max_length=100)
+    # tu peux retirer type_kpi si tu veux le tirer de l’indicateur
+    type_kpi = models.CharField(max_length=30, choices=TYPE_KPI_CHOICES, blank=True, null=True)
+    cible = models.CharField(max_length=100, blank=True, null=True)
     poids = models.DecimalField(max_digits=5, decimal_places=2)
-    annee = models.IntegerField()  # Ce champ sera rempli automatiquement
-    type_objectif = models.CharField(max_length=30, choices=TYPE_OBJECTIF_CHOICES, default='Individuel')
+    annee = models.IntegerField()
+    type_objectif = models.CharField(max_length=30, choices=[('Individuel','Individuel'), ('Collectif','Collectif')], default='Individuel')
 
-    service = models.ForeignKey('Service', on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
     agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)
-    periode = models.ForeignKey('Periode', on_delete=models.CASCADE)
-
-    est_valide = models.BooleanField(default=False)  # validé par le N+1
+    periode = models.ForeignKey(Periode, on_delete=models.CASCADE)
+    est_valide = models.BooleanField(default=False)
     est_rejete = models.BooleanField(default=False)
     commentaire_rejet = models.TextField(blank=True, null=True)
     date_validation = models.DateTimeField(null=True, blank=True)
-
     competences_comportementales = models.TextField(blank=True, null=True)
+
+    indicateur = models.ForeignKey(
+        Indicateur,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='objectifs'
+    )
 
     @property
     def taux_avancement_total(self):
@@ -60,11 +75,6 @@ class Objectif(models.Model):
         if not realisations.exists():
             return 0
         return sum(r.taux_avancement for r in realisations) // realisations.count()
-
-    def save(self, *args, **kwargs):
-        if self.periode:
-            self.annee = self.periode.date_debut.year
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.libelle[:40]}..."

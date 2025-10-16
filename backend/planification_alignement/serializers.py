@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Periode, Service, Objectif
+from .models import Periode, Service, Objectif, Indicateur
 
 
 
@@ -13,9 +13,30 @@ class ServiceSerializer(serializers.ModelSerializer):
         model = Service
         fields = '__all__'
 
+class IndicateurSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Indicateur
+        fields = ['id', 'code', 'libelle', 'description', 'type_kpi', 'cible']
+
+
 class ObjectifSerializer(serializers.ModelSerializer):
+    indicateur = IndicateurSerializer(read_only=True)
+    indicateur_id = serializers.PrimaryKeyRelatedField(
+        source='indicateur',
+        queryset=Indicateur.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = Objectif
-        fields = '__all__'
-        read_only_fields = ['agent', 'est_valide', 'annee', 'service']
-        taux_avancement_total = serializers.IntegerField(source='taux_avancement_total', read_only=True)
+        fields = [
+            'id', 'libelle', 'type_kpi', 'cible', 'poids',
+            'service', 'agent', 'periode',
+            'est_valide', 'est_rejete', 'commentaire_rejet', 'date_validation',
+            'competences_comportementales',
+            'indicateur', 'indicateur_id',
+        ]
+        # selon ta logique, tu peux rendre certains champs read_only
+        read_only_fields = ['agent', 'service', 'est_valide', 'date_validation']

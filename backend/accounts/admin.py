@@ -9,6 +9,7 @@ from evaluation.models import Evaluation, NoteFinale, Contestation, AutoEvaluati
 
 from reporting.models import AuditLog, UserRole, ExportedData, Report
 
+from planification_alignement.models import Indicateur
 
 
 # accounts/admin.py
@@ -61,6 +62,13 @@ class ObjectifAdmin(admin.ModelAdmin):
     search_fields = ('libelle', 'cible', 'service__nom_service', 'agent__nom')
     ordering = ('annee', 'type_kpi')
     readonly_fields = ('annee',)
+
+    def save_model(self, request, obj, form, change):
+        # Si c’est une création (change = False) ou si l’annee n’est pas renseignée
+        if obj.periode:
+            obj.annee = obj.periode.date_debut.year
+        super().save_model(request, obj, form, change)
+
 @admin.register(Realisation)
 class RealisationAdmin(admin.ModelAdmin):
     list_display = ('id', 'objectif', 'agent', 'taux_avancement', 'est_valide', 'est_rejete', 'date_soumission', 'date_validation')
@@ -120,3 +128,9 @@ class ExportedDataAdmin(admin.ModelAdmin):
     list_display = ('data_type', 'exported_by', 'export_date', 'file_format')
     search_fields = ('data_type', 'exported_by')
     list_filter = ('data_type', 'export_date', 'file_format')
+
+@admin.register(Indicateur)
+class IndicateurAdmin(admin.ModelAdmin):
+    list_display = ('id', 'code', 'libelle', 'type_kpi', 'cible')
+    search_fields = ('code', 'libelle')
+    ordering = ('code',)
