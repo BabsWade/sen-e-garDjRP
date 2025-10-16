@@ -34,8 +34,11 @@ AUTH_USER_MODEL = 'accounts.Agent'
 INSTALLED_APPS = [
     'rest_framework',
     'accounts',
-    'performance',
+    'planification_alignement',  # Ajout de l'application F2
+    'suivi_execution',  # Ajout de l'application F3
+    #'performance',
     'evaluation',
+    'reporting',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,6 +58,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+
 
 ROOT_URLCONF = 'senegar.urls'
 

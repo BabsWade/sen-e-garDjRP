@@ -1,4 +1,4 @@
-from django.shortcuts import render
+"""from django.shortcuts import render
 from rest_framework import viewsets, permissions
 from .models import Periode, Service, Objectif, Realisation
 from .serializers import PeriodeSerializer, ServiceSerializer, ObjectifSerializer, RealisationSerializer
@@ -162,3 +162,4 @@ class ObjectifViewSet(viewsets.ModelViewSet):
 
         return super().update(request, *args, **kwargs)
 
+"""

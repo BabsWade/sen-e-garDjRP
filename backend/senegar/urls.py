@@ -33,6 +33,9 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),  # à créer dans l'étape suivante
 
     path('api/performance/', include('performance.urls')),
+    path('api/', include('planification_alignement.urls')),  # ← Assure-toi que ceci est présent
+    path('api/', include('suivi_execution.urls')),  # 👈 AJOUTE CELUI-CI
+path('api/', include('evaluation.urls')),  # 👈 AJOUTE CELUI-CI
 
 ]
 

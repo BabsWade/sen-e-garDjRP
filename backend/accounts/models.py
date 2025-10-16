@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-# accounts/models.py
-from performance.models import Service  # Assurez-vous d'importer correctement Service depuis l'application performance
-
+from planification_alignement.models import Service  # Assurez-vous que le modèle Service est correctement importé
 
 ROLES = (
     ('AGENT', 'Agent Public'),
@@ -10,6 +8,7 @@ ROLES = (
     ('DRH', 'Direction RH'),
     ('ADMIN', 'Administrateur Technique'),
 )
+
 
 class AgentManager(BaseUserManager):
     def create_user(self, matricule, email, nom, prenom, password=None, **extra_fields):
@@ -29,6 +28,7 @@ class AgentManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(matricule, email, nom, prenom, password, **extra_fields)
 
+
 class Agent(AbstractBaseUser, PermissionsMixin):
     matricule = models.CharField(max_length=20, unique=True)
     nom = models.CharField(max_length=50)
@@ -37,12 +37,19 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLES)
     date_embauche = models.DateField(null=True, blank=True)
 
-    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True)  # Permet à 'service' d'être null
-
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
     responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+
+    objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
+
+    performance_moyenne = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    evaluation_comportementale = models.TextField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+
+    # Nouveaux champs ajoutés
+    etat_agent = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif'), ('En pause', 'En pause')], default='Actif')
 
     USERNAME_FIELD = 'matricule'
     REQUIRED_FIELDS = ['email', 'nom', 'prenom']
@@ -58,4 +65,24 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.prenom
 
+    def calculer_performance(self):
+        total_performance = 0
+        objectifs_valides = 0
+        for objectif in self.objectifs.all():
+            for realisation in objectif.realisations.filter(agent=self):
+                if realisation.est_valide:
+                    total_performance += realisation.taux_avancement * objectif.poids  # Pondérer la performance
+                    objectifs_valides += 1
+        if objectifs_valides > 0:
+            self.performance_moyenne = total_performance / objectifs_valides
+        else:
+            self.performance_moyenne = 0
+        self.save()
 
+    def ajouter_objectif(self, objectif):
+        self.objectifs.add(objectif)
+        self.save()
+
+    def ajouter_evaluation_comportementale(self, evaluation):
+        self.evaluation_comportementale = evaluation
+        self.save()

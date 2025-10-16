@@ -40,3 +40,43 @@
 .read-the-docs {
   color: #888;
 }
+/* App.css */
+.agent-home {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #f4f4f4;
+  padding: 20px;
+}
+
+.sidebar ul {
+  list-style-type: none;
+}
+
+.sidebar ul li {
+  margin-bottom: 15px;
+}
+
+.dashboard {
+  flex-grow: 1;
+  padding: 20px;
+}
+
+.performance-summary, .objectives-summary, .notifications {
+  margin-bottom: 20px;
+}
+
+.notifications ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.notifications ul li {
+  padding: 10px;
+  background-color: #f9f9f9;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}

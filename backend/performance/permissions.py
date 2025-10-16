@@ -1,12 +1,6 @@
-from rest_framework import permissions
+"""from rest_framework import permissions
 
 class ObjectifAccessPermission(permissions.BasePermission):
-    """
-    Restriction des accès aux objectifs :
-    - Agent : accès à ses propres objectifs
-    - N+1 : accès aux objectifs des subordonnés
-    - DRH : accès complet
-    """
 
     def has_permission(self, request, view):
         return request.user.is_authenticated
@@ -25,3 +19,4 @@ class ObjectifAccessPermission(permissions.BasePermission):
             return obj.agent.responsable_matricule == user.matricule
 
         return False
+"""

@@ -38,7 +38,7 @@ const Login: React.FC = () => {
 
       // Rediriger en fonction du rôle
       if (role === 'AGENT') {
-        navigate('/agent-dashboard');
+        navigate('/agent-home');
       } else if (role === 'RESPONSABLE_N1') {
         navigate('/n1-dashboard');
       } else if (role === 'DRH') {

@@ -1,4 +1,4 @@
-from rest_framework import serializers
+"""from rest_framework import serializers
 from .models import Periode, Service, Objectif, Realisation
 
 
@@ -25,3 +25,4 @@ class RealisationSerializer(serializers.ModelSerializer):
         model = Realisation
         fields = '__all__'
         read_only_fields = ['agent', 'est_valide', 'est_rejete', 'commentaire_rejet', 'feedback', 'date_soumission', 'date_validation']
+"""

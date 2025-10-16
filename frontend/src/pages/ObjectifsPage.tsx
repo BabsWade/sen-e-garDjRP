@@ -1,8 +1,10 @@
 // src/pages/ObjectifsPage.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../api';
+import { Link, useNavigate } from 'react-router-dom';  // ou juste Link
 
 interface Objectif {
+  id: number;
   libelle: string;
   type_kpi: string;
   cible: string;
@@ -34,6 +36,11 @@ const ObjectifsPage = () => {
   return (
     <div>
       <h1>Mes Objectifs</h1>
+      <div style={{ marginBottom: '1rem' }}>
+        <Link to="/objectifs/create">
+          <button>Créer un objectif</button>
+        </Link>
+      </div>
       {loading ? (
         <p>Loading...</p>
       ) : (
@@ -46,6 +53,10 @@ const ObjectifsPage = () => {
               Poids: {objectif.poids} <br />
               Période: {objectif.periode} <br />
               Service: {objectif.service} <br />
+
+              <Link to={`/objectifs/${objectif.id}/edit`}>
+                <button>Modifier</button>
+              </Link>
             </li>
           ))}
         </ul>

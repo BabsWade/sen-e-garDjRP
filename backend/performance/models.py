@@ -1,4 +1,4 @@
-from django.db import models
+"""from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -71,4 +71,4 @@ class Realisation(models.Model):
         ordering = ['-date_soumission']
 
     def __str__(self):
-        return f"Réalisation de {self.agent} pour {self.objectif}"
+        return f"Réalisation de {self.agent} pour {self.objectif}"""""

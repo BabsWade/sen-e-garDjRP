@@ -1,26 +1,34 @@
 // src/pages/RealisationsPage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api';
 
-// Assurez-vous d'ajouter 'id' à l'interface
 interface Realisation {
-  id: number; // Ajout du champ 'id' pour TypeScript
+  objectif_libelle: string;
+  id: number;
   description: string;
   taux_avancement: number;
-  feedback: string;
+  preuve?: string;  // URL ou chemin du fichier
+  est_valide: boolean;
+  est_rejete: boolean;
+  commentaire_rejet?: string;
+  objectif: {
+    id: number;
+    libelle: string;
+  };
 }
 
-const RealisationsPage = () => {
+const RealisationsPage: React.FC = () => {
   const [realisations, setRealisations] = useState<Realisation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchRealisations = async () => {
       try {
-        const response = await api.get('realisations/');
+        const response = await api.get('/realisations/');  // adapter le path
         setRealisations(response.data);
       } catch (error) {
-        console.error('Error fetching realisations:', error);
+        console.error('Erreur chargement réalisations :', error);
       } finally {
         setLoading(false);
       }
@@ -29,32 +37,45 @@ const RealisationsPage = () => {
     fetchRealisations();
   }, []);
 
-  const submitFeedback = async (realisationId: number, feedback: string) => {
-    try {
-      await api.post(`realisations/${realisationId}/feedback`, { feedback });
-      alert('Feedback soumis avec succès');
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
-    }
-  };
-
   return (
     <div>
       <h1>Mes Réalisations</h1>
       {loading ? (
-        <p>Loading...</p>
+        <p>Loading …</p>
       ) : (
         <ul>
-          {realisations.map((realisation, index) => (
-            <li key={index}>
-              <strong>{realisation.description}</strong><br />
-              Avancement: {realisation.taux_avancement}% <br />
-              Feedback: {realisation.feedback} <br />
-              <button onClick={() => submitFeedback(realisation.id, 'Bien fait')}>Soumettre Feedback</button>
+          {realisations.map((r) => (
+            <li key={r.id} style={{ border: '1px solid #ccc', margin: '1em', padding: '1em' }}>
+              <strong>Objectif :</strong> {r.objectif_libelle ?? '—'}<br/>
+              <strong>Description :</strong> {r.description} <br />
+              <strong>Taux d’avancement :</strong> {r.taux_avancement}% <br />
+              {r.preuve && (
+                <div>
+                  <strong>Preuve :</strong>{' '}
+                  <a href={r.preuve} target="_blank" rel="noopener noreferrer">Voir le document</a>
+                </div>
+              )}
+              <strong>Status :</strong>{' '}
+              {r.est_valide
+                ? 'Validée'
+                : r.est_rejete
+                ? `Rejetée (${r.commentaire_rejet})`
+                : 'En attente de validation'}<br />
+              {/* Si la réalisation est modifiable (pas validée ou rejetée), proposer un lien d’édition */}
+              {!r.est_valide && !r.est_rejete && (
+                <Link to={`/realisations/${r.id}/edit`}>
+                  <button>Modifier</button>
+                </Link>
+              )}
             </li>
           ))}
         </ul>
       )}
+      <div style={{ marginTop: '2em' }}>
+        <Link to="/realisations/create">
+          <button>Ajouter une Réalisation</button>
+        </Link>
+      </div>
     </div>
   );
 };
