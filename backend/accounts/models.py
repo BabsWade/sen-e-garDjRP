@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from planification_alignement.models import Service  # Assurez-vous que le modèle Service est correctement importé
+from django.utils import timezone
 
 ROLES = (
     ('AGENT', 'Agent Public'),
@@ -40,7 +41,7 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
     responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
-    objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
+    #objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
 
     performance_moyenne = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     evaluation_comportementale = models.TextField(null=True, blank=True)
@@ -65,24 +66,44 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.prenom
 
-    def calculer_performance(self):
-        total_performance = 0
-        objectifs_valides = 0
-        for objectif in self.objectifs.all():
-            for realisation in objectif.realisations.filter(agent=self):
-                if realisation.est_valide:
-                    total_performance += realisation.taux_avancement * objectif.poids  # Pondérer la performance
-                    objectifs_valides += 1
-        if objectifs_valides > 0:
-            self.performance_moyenne = total_performance / objectifs_valides
-        else:
-            self.performance_moyenne = 0
-        self.save()
+    def calculer_performance_ponderee(self):
+        # Récupère les objectifs par la FK (relation directe)
+        objectifs = self.objectif_set.filter(est_valide=True)
 
-    def ajouter_objectif(self, objectif):
-        self.objectifs.add(objectif)
-        self.save()
+        if not objectifs.exists():
+            self.performance_moyenne = 0
+            self.save(update_fields=['performance_moyenne'])
+            HistoriquePerformance.objects.create(agent=self, performance=0)
+            return self.performance_moyenne
+
+        numerator = 0
+        denom = 0
+        for obj in objectifs:
+            taux = obj.taux_avancement
+            poids = obj.poids
+            numerator += (taux * poids)
+            denom += poids
+
+        performance = numerator / denom if denom > 0 else 0
+
+        self.performance_moyenne = performance
+        self.save(update_fields=['performance_moyenne'])
+        HistoriquePerformance.objects.create(agent=self, performance=performance)
+
+        return performance
 
     def ajouter_evaluation_comportementale(self, evaluation):
         self.evaluation_comportementale = evaluation
         self.save()
+
+
+class HistoriquePerformance(models.Model):
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='historique_performances')
+    performance = models.DecimalField(max_digits=5, decimal_places=2)
+    date_calcul = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-date_calcul']  # plus récent en premier
+
+    def __str__(self):
+        return f"Performance de {self.agent} : {self.performance}% le {self.date_calcul.strftime('%Y-%m-%d %H:%M')}"

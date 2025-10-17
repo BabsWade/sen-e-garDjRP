@@ -49,7 +49,14 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
-
         return user
+
+class AgentPerformanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agent
+        fields = ['id', 'matricule', 'nom', 'prenom', 'performance_moyenne']
+        read_only_fields = ['performance_moyenne']
+
+
 
 

@@ -6,4 +6,5 @@ router = DefaultRouter()
 router.register(r'realisations', RealisationViewSet, basename='realisation')  # 👈 Enregistre le ViewSet ici
 urlpatterns = [
     path('', include(router.urls)),
+
 ]

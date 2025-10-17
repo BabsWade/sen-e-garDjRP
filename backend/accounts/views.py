@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import AgentRegisterSerializer
+from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer
 from .models import Agent
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .token_serializer import MyTokenObtainPairSerializer
@@ -91,3 +91,17 @@ class CurrentUserView(APIView):
             "prenom": user.prenom,
             "role": user.role,
         })
+
+class AgentPerformanceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent = request.user
+        print("Agent connecté :", agent)
+        print("Matricule :", agent.matricule)
+        print("Nom :", agent.nom)
+        print("Prénom :", agent.prenom)
+        agent.calculer_performance_ponderee()
+        serializer = AgentPerformanceSerializer(agent)
+        print("Données sérialisées :", serializer.data)
+        return Response(serializer.data)

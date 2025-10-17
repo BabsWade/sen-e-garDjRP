@@ -10,6 +10,8 @@ router.register(r'indicateurs', IndicateurViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('performance/', PerformanceAPIView.as_view(), name='performance'),
+    path('performance-agent/', PerformanceAPIView.as_view(), name='performance'),
+    # path('performance-agent/', PerformanceAgentAPIView.as_view(), name='performance-agent')
+
 
 ]

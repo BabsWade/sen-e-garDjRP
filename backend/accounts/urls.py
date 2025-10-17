@@ -3,7 +3,7 @@ from .views import (
     AgentRegisterView,
     CurrentUserView,
     ActivateAccountView,
-    SetPasswordView,
+    SetPasswordView, AgentPerformanceView,
 )
 
 urlpatterns = [
@@ -12,4 +12,6 @@ urlpatterns = [
     path('activate/<uidb64>/<token>/', ActivateAccountView.as_view(), name='activate'),
 
     path('set-password/', SetPasswordView.as_view(), name='set_password'),
+    path('performance-agent/', AgentPerformanceView.as_view(), name='performance-agent'),
+
 ]

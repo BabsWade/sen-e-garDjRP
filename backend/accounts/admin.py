@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 #from performance.models import Periode, Service, Objectif, Realisation
-from .models import Agent
+from .models import Agent, HistoriquePerformance
 from planification_alignement.models import Periode, Service, Objectif
 from suivi_execution.models import Realisation
 
@@ -134,3 +134,10 @@ class IndicateurAdmin(admin.ModelAdmin):
     list_display = ('id', 'code', 'libelle', 'type_kpi', 'cible')
     search_fields = ('code', 'libelle')
     ordering = ('code',)
+
+@admin.register(HistoriquePerformance)
+class HistoriquePerformanceAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'performance', 'date_calcul')
+    list_filter = ('agent',)
+    search_fields = ('agent__matricule', 'agent__nom', 'agent__prenom')
+    ordering = ('-date_calcul',)
