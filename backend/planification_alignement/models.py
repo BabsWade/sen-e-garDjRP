@@ -51,7 +51,7 @@ class Objectif(models.Model):
     poids = models.DecimalField(max_digits=5, decimal_places=2)
     annee = models.IntegerField()
     type_objectif = models.CharField(max_length=30, choices=[('Individuel','Individuel'), ('Collectif','Collectif')], default='Individuel')
-    taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # nouveau champ
+    #taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # nouveau champ
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
     agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)
