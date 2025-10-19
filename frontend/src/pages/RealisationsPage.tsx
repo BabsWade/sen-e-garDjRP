@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import Sidebar from '../components/Sidebar';
 
 interface Realisation {
   objectif_libelle: string;
@@ -39,6 +40,7 @@ const RealisationsPage: React.FC = () => {
 
   return (
     <div>
+           <Sidebar />
       <h1>Mes Réalisations</h1>
       {loading ? (
         <p>Loading …</p>

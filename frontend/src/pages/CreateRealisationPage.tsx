@@ -2,6 +2,7 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import Sidebar from '../components/Sidebar';
 
 interface ObjectifOption {
   id: number;
@@ -67,6 +68,7 @@ const CreateRealisationPage: React.FC = () => {
 
   return (
     <div>
+           <Sidebar />
       <h2>Nouvelle Réalisation</h2>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
       <form onSubmit={handleSubmit} encType="multipart/form-data">

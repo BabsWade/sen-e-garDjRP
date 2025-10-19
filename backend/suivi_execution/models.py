@@ -10,9 +10,7 @@ class Realisation(models.Model):
     agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True,
                               blank=True)  # Utilisation du nom en chaîne
     description = models.TextField()
-    taux_avancement = models.PositiveIntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(100)]
-    )
+
     preuve = models.FileField(upload_to='preuves/', null=True, blank=True)
     est_valide = models.BooleanField(default=False)
     est_rejete = models.BooleanField(default=False)

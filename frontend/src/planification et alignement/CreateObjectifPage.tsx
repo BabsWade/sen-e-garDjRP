@@ -3,6 +3,7 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import Sidebar from '../components/Sidebar';
 
 interface PeriodeOption {
   id: number;
@@ -91,6 +92,7 @@ const CreateObjectifPage: React.FC = () => {
 
   return (
     <div>
+         <Sidebar />
       <h2>Créer un Objectif</h2>
       <form onSubmit={handleSubmit}>
         <div>

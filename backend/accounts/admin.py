@@ -57,21 +57,21 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Objectif)
 class ObjectifAdmin(admin.ModelAdmin):
-    list_display = ('id', 'libelle', 'type_kpi', 'cible', 'poids', 'annee', 'service', 'agent', 'periode', 'est_valide', 'est_rejete')
+    list_display = ('id', 'libelle', 'type_kpi', 'cible', 'poids', 'annee', 'service', 'agent', 'periode', 'taux_avancement', 'est_valide', 'est_rejete')
     list_filter = ('type_kpi', 'annee', 'est_valide', 'est_rejete', 'service')
     search_fields = ('libelle', 'cible', 'service__nom_service', 'agent__nom')
     ordering = ('annee', 'type_kpi')
     readonly_fields = ('annee',)
+    exclude = ('taux_avancement',)  # Empêche la modification manuelle
 
     def save_model(self, request, obj, form, change):
         # Si c’est une création (change = False) ou si l’annee n’est pas renseignée
         if obj.periode:
             obj.annee = obj.periode.date_debut.year
         super().save_model(request, obj, form, change)
-
 @admin.register(Realisation)
 class RealisationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'objectif', 'agent', 'taux_avancement', 'est_valide', 'est_rejete', 'date_soumission', 'date_validation')
+    list_display = ('id', 'objectif', 'agent', 'est_valide', 'est_rejete', 'date_soumission', 'date_validation')
     list_filter = ('est_valide', 'est_rejete', 'date_soumission')
     search_fields = ('objectif__libelle', 'agent__nom', 'agent__prenom')
     ordering = ('-date_soumission',)

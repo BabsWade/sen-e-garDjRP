@@ -45,4 +45,3 @@ class ContestationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Lors de la création, force l’agent à être celui connecté
         serializer.save(agent=self.request.user)
-

@@ -47,7 +47,7 @@ class Objectif(models.Model):
     libelle = models.TextField()
     # tu peux retirer type_kpi si tu veux le tirer de l’indicateur
     type_kpi = models.CharField(max_length=30, choices=TYPE_KPI_CHOICES, blank=True, null=True)
-    cible = models.CharField(max_length=100, blank=True, null=True)
+    cible = models.FloatField(max_length=100, blank=True, null=True)
     poids = models.DecimalField(max_digits=5, decimal_places=2)
     annee = models.IntegerField()
     type_objectif = models.CharField(max_length=30, choices=[('Individuel','Individuel'), ('Collectif','Collectif')], default='Individuel')

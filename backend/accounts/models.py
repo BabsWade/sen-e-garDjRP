@@ -42,6 +42,7 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
     #objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
+    #superieur = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='subordonnes')
 
     performance_moyenne = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     evaluation_comportementale = models.TextField(null=True, blank=True)

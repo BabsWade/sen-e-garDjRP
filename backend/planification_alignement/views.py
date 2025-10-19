@@ -112,6 +112,8 @@ class ObjectifViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        if request.user != instance.agent:
+            return Response({'detail': 'Non autorisé.'}, status=403)
         return super().update(request, *args, **kwargs)
 
 
