@@ -8,10 +8,10 @@ class AutoEvaluationSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['agent']
 
-        def create(self, validated_data):
-            user = self.context['request'].user
-            validated_data['agent'] = user
-            return super().create(validated_data)
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['agent'] = user
+        return super().create(validated_data)
 
 class EvaluationSerializer(serializers.ModelSerializer):
     objectif_libelle = serializers.SerializerMethodField()

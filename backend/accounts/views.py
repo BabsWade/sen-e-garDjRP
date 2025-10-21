@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer
 from .models import Agent
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .token_serializer import MyTokenObtainPairSerializer
+from .token_serializers import MyTokenObtainPairSerializer
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404

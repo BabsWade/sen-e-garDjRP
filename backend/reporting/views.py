@@ -8,6 +8,8 @@ from .serializers import AuditLogSerializer, ReportSerializer, ExportedDataSeria
 import csv
 from django.http import HttpResponse
 from .models import Report
+from rest_framework.permissions import IsAuthenticated  # ➕ à ajouter
+
 
 class AuditLogViewSet(viewsets.ModelViewSet):
     queryset = AuditLog.objects.all()
@@ -15,15 +17,16 @@ class AuditLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
-    class ReportViewSet(viewsets.ModelViewSet):
-        queryset = Report.objects.all()
-        serializer_class = ReportSerializer
-        permission_classes = [IsAuthenticated]
+class ReportViewSet(viewsets.ModelViewSet):
+    queryset = Report.objects.all()
+    serializer_class = ReportSerializer
+    permission_classes = [IsAuthenticated]
 
-    class ExportedDataViewSet(viewsets.ModelViewSet):
-        queryset = ExportedData.objects.all()
-        serializer_class = ExportedDataSerializer
-        permission_classes = [IsAuthenticated]
+
+class ExportedDataViewSet(viewsets.ModelViewSet):
+    queryset = ExportedData.objects.all()
+    serializer_class = ExportedDataSerializer
+    permission_classes = [IsAuthenticated]
 
 
 def export_report(request):

@@ -11,27 +11,6 @@ from accounts.models import Agent
 from django.conf import settings  # Importer settings pour accéder à AUTH_USER_MODEL
 
 
-class AuditLog(models.Model):
-    ACTION_CHOICES = [
-        ('CREATE', 'Création'),
-        ('UPDATE', 'Mise à jour'),
-        ('DELETE', 'Suppression'),
-    ]
-
-    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
-    model_name = models.CharField(max_length=100)  # Le modèle affecté (ex : "Objectif", "Agent")
-    object_id = models.PositiveIntegerField()  # ID de l'objet affecté
-    user = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True)  # L'utilisateur qui a effectué l'action
-    timestamp = models.DateTimeField(auto_now_add=True)  # Heure de l'action
-    description = models.TextField()  # Description de l'action (par exemple, "mise à jour de la note de performance")
-
-    def __str__(self):
-        return f"{self.action} sur {self.model_name} par {self.user} à {self.timestamp}"
-
-    class Meta:
-        verbose_name = "Audit Log"
-        verbose_name_plural = "Audit Logs"
-
 
 class AuditLog(models.Model):
     ACTION_CHOICES = [
