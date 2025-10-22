@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import { Bar, Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 
 const AgentDashboard: React.FC = () => {
@@ -14,26 +14,26 @@ const AgentDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // 🔹 1. Données agent + performance
+        // 1️⃣ Performance + infos agent
         const perfResp = await api.get('/performance-agent/');
         setAgent(perfResp.data);
         setPerformance(perfResp.data.performance_moyenne || 0);
 
-        // 🔹 2. Objectifs individuels
+        // 2️⃣ Objectifs
         const objResp = await api.get('/agent-objectifs/');
         setObjectifs(objResp.data);
 
-        // 🔹 3. Feedbacks récents
+        // 3️⃣ Feedbacks
         const fbResp = await api.get('/agent-feedbacks/');
         setFeedbacks(fbResp.data);
 
-        // 🔹 4. Historique performances
+        // 4️⃣ Historique performances
         const histResp = await api.get('/agent-historique-performances/');
         setHistorique(histResp.data);
 
         setLoading(false);
       } catch (error) {
-        console.error('Erreur de chargement du tableau de bord :', error);
+        console.error('Erreur lors du chargement du tableau de bord :', error);
         setLoading(false);
       }
     };
@@ -65,37 +65,39 @@ const AgentDashboard: React.FC = () => {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="bg-gray-100 text-left text-gray-600">
-              <th className="p-2">Intitulé</th>
-              <th className="p-2">Pondération</th>
-              <th className="p-2">Note</th>
-              <th className="p-2">Performance</th>
-              <th className="p-2">Statut</th>
+              <th className="p-2">Libellé</th>
+              <th className="p-2">Type</th>
+              <th className="p-2">Poids</th>
+              <th className="p-2">Taux d’avancement</th>
+              <th className="p-2">Validation</th>
             </tr>
           </thead>
           <tbody>
             {objectifs.map((obj, i) => (
               <tr key={i} className="border-b hover:bg-gray-50">
-                <td className="p-2">{obj.description}</td>
-                <td className="p-2">{obj.ponderation}%</td>
-                <td className="p-2">{obj.note}</td>
-                <td className="p-2">{(obj.note * obj.ponderation / 100).toFixed(2)}%</td>
-                <td className="p-2">{obj.statut || '—'}</td>
+                <td className="p-2">{obj.libelle}</td>
+                <td className="p-2">{obj.type_kpi}</td>
+                <td className="p-2">{obj.poids}%</td>
+                <td className="p-2">{obj.taux_avancement}%</td>
+                <td className="p-2">
+                  {obj.est_valide ? '✅ Validé' : obj.est_rejete ? '❌ Rejeté' : '⏳ En attente'}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* 📈 Graphique de performance */}
+      {/* 📈 Historique des performances */}
       <div className="bg-white shadow rounded-2xl p-6">
         <h2 className="text-xl font-bold text-gray-700 mb-4">Évolution de ma performance</h2>
         <Line
           data={{
-            labels: historique.map(h => h.annee),
+            labels: historique.map(h => new Date(h.date).toLocaleDateString()),
             datasets: [
               {
-                label: 'Performance annuelle',
-                data: historique.map(h => h.note_globale),
+                label: 'Performance (%)',
+                data: historique.map(h => h.performance),
                 fill: false,
                 borderColor: '#2563eb',
                 tension: 0.3,
@@ -119,9 +121,9 @@ const AgentDashboard: React.FC = () => {
           <ul className="space-y-3">
             {feedbacks.map((fb, i) => (
               <li key={i} className="border-l-4 border-blue-500 pl-3">
-                <p className="text-gray-700 text-sm">{fb.commentaire}</p>
+                <p className="text-gray-700 text-sm">{fb.description || '—'}</p>
                 <p className="text-gray-500 text-xs">
-                  {fb.auteur} — {new Date(fb.date).toLocaleDateString()}
+                  Objectif : {fb.objectif_libelle} — {new Date(fb.date_soumission).toLocaleDateString()}
                 </p>
               </li>
             ))}

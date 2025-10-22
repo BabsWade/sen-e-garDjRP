@@ -23,16 +23,19 @@ class ObjectifAccessPermission(permissions.BasePermission):
             return False  # L'utilisateur n'a pas de profil Agent associé
 
         # DRH peut tout voir
-        if user_agent.role == 'DRH':
-            return True
+       # if user_agent.role == 'DRH':
+           # return True
+        if user.role == 'DRH': return True
 
         # Agent peut voir seulement ses propres objectifs
-        if user_agent.role == 'AGENT':
-            return obj.agent == user_agent
+        #if user_agent.role == 'AGENT':
+            #return obj.agent == user_agent
+        if user.role == 'AGENT': return obj.agent == user
 
         # Responsable N+1 peut voir les objectifs de ses subordonnés
-        if user_agent.role == 'RESPONSABLE_N1':
-            return obj.agent.responsable == user_agent
+        #if user_agent.role == 'RESPONSABLE_N1':
+            #return obj.agent.responsable == user_agent
+        if user.role == 'RESPONSABLE_N1': return obj.agent.responsable == user
 
         # Tout autre rôle n'a pas accès
         return False

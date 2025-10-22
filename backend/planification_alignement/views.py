@@ -12,6 +12,7 @@ from .serializers import (
     IndicateurSerializer
 )
 from .permissions import ObjectifAccessPermission
+from .serializers import AgentPerformanceSerializer
 
 
 # Permissions personnalisées
@@ -27,7 +28,9 @@ class IsResponsable(BasePermission):
 
 # ViewSets
 class PeriodeViewSet(viewsets.ModelViewSet):
-    queryset = Objectif.periode.field.related_model.objects.all()
+    queryset = Periode.objects.all()
+
+    #queryset = Objectif.periode.field.related_model.objects.all()
     serializer_class = PeriodeSerializer
 
     def get_permissions(self):
@@ -37,7 +40,9 @@ class PeriodeViewSet(viewsets.ModelViewSet):
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
-    queryset = Objectif.service.field.related_model.objects.all()
+    #queryset = Objectif.service.field.related_model.objects.all()
+    queryset = Service.objects.all()
+
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated, IsDRH]
 
@@ -58,7 +63,9 @@ class ObjectifViewSet(viewsets.ModelViewSet):
         if user.role == 'DRH':
             return Objectif.objects.all()
         elif user.role == 'RESPONSABLE_N1':
-            return Objectif.objects.filter(agent__responsable_matricule=user.matricule)
+            return Objectif.objects.filter(agent__responsable=user)
+
+            #return Objectif.objects.filter(agent__responsable_matricule=user.matricule)
         elif user.role == 'AGENT':
             return Objectif.objects.filter(agent=user)
         return Objectif.objects.none()
@@ -123,10 +130,6 @@ class PerformanceAPIView(APIView):
     def get(self, request):
         agent = request.user
         agent.calculer_performance_ponderee()
-        return Response({
-            'performance_moyenne': float(agent.performance_moyenne),
-            'nom': agent.nom,
-            'prenom': agent.prenom,
-            'matricule': agent.matricule,
-            'id': agent.id  # ou matricule si tu veux l'afficher comme identifiant
-        })
+        serializer = AgentPerformanceSerializer(agent)
+        return Response(serializer.data)
+

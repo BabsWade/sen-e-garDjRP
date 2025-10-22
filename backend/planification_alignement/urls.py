@@ -7,6 +7,7 @@ router.register(r'periodes', PeriodeViewSet)
 router.register(r'services', ServiceViewSet)
 router.register(r'objectifs', ObjectifViewSet, basename='objectif')
 router.register(r'indicateurs', IndicateurViewSet)
+router.register(r'agent-objectifs', ObjectifViewSet, basename='agent-objectifs')
 
 urlpatterns = [
     path('', include(router.urls)),

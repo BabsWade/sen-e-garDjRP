@@ -8,7 +8,6 @@ from .models import Realisation
 from .serializers import RealisationSerializer
 
 class RealisationViewSet(viewsets.ModelViewSet):
-    queryset = Realisation.objects.all()
     serializer_class = RealisationSerializer
     permission_classes = [IsAuthenticated]
 
@@ -17,10 +16,26 @@ class RealisationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
+        # 🔹 Base queryset avec optimisations pour éviter le N+1 Query Problem
+        base_queryset = (
+            Realisation.objects
+            .select_related(
+                'agent',                # FK direct vers Agent
+                'objectif',             # FK direct vers Objectif
+                'objectif__agent',      # Jointure jusqu’à l’agent lié à l’objectif
+                'objectif__service',    # Jointure jusqu’au service lié à l’objectif
+                'objectif__periode'     # Jointure jusqu’à la période de l’objectif
+            )
+            .prefetch_related()  # Tu peux ajouter ici un ManyToMany si besoin
+        )
+
+        # 🔸 Filtrage selon le rôle de l’utilisateur
         if user.role == 'AGENT':
-            return Realisation.objects.filter(agent=user)
+            return base_queryset.filter(agent=user)
         elif user.role == 'RESPONSABLE_N1':
-            return Realisation.objects.filter(objectif__agent__superieur=user)
+            return base_queryset.filter(objectif__agent__superieur=user)
+
         return Realisation.objects.none()
 
     @action(detail=True, methods=['post'], url_path='valider')

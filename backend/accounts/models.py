@@ -39,7 +39,13 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     date_embauche = models.DateField(null=True, blank=True)
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
-    responsable = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    responsable = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subordonnes'
+    )
 
     #objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
     #superieur = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='subordonnes')
@@ -67,31 +73,48 @@ class Agent(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.prenom
 
-    def calculer_performance_ponderee(self):
-        # Récupère les objectifs par la FK (relation directe)
+    def calculer_performance_ponderee(self, seuil_variation=1.0):
+        """
+        Calcule la performance pondérée de l'agent.
+        Enregistre un nouvel HistoriquePerformance uniquement si la variation
+        dépasse ±seuil_variation (%).
+        """
+        from decimal import Decimal
+
         objectifs = self.objectif_set.filter(est_valide=True)
 
         if not objectifs.exists():
             self.performance_moyenne = 0
             self.save(update_fields=['performance_moyenne'])
-            HistoriquePerformance.objects.create(agent=self, performance=0)
+            if not self.historique_performances.exists():
+                HistoriquePerformance.objects.create(agent=self, performance=0)
             return self.performance_moyenne
 
-        numerator = 0
-        denom = 0
+        numerator = 0.0
+        denom = 0.0
         for obj in objectifs:
-            taux = obj.taux_avancement
-            poids = obj.poids
-            numerator += (taux * poids)
+            taux = float(obj.taux_avancement)
+            poids = float(obj.poids)
+            numerator += taux * poids
             denom += poids
 
-        performance = numerator / denom if denom > 0 else 0
+        performance = numerator / denom if denom > 0 else 0.0
 
-        self.performance_moyenne = performance
+        dernier_historique = self.historique_performances.order_by('-date_calcul').first()
+
+        if not dernier_historique:
+            HistoriquePerformance.objects.create(agent=self, performance=performance)
+        else:
+            ancienne_perf = float(dernier_historique.performance)
+            variation = abs(performance - ancienne_perf)
+
+            if variation >= seuil_variation:
+                HistoriquePerformance.objects.create(agent=self, performance=performance)
+
+        self.performance_moyenne = round(performance, 2)
         self.save(update_fields=['performance_moyenne'])
-        HistoriquePerformance.objects.create(agent=self, performance=performance)
 
-        return performance
+        return self.performance_moyenne
 
     def ajouter_evaluation_comportementale(self, evaluation):
         self.evaluation_comportementale = evaluation

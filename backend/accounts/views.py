@@ -19,7 +19,16 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
+from planification_alignement.models import Objectif
+from planification_alignement.serializers import ObjectifSerializer
+from suivi_execution.models import Realisation
+from suivi_execution.serializers import RealisationSerializer
+from .models import HistoriquePerformance
+from .serializers import HistoriquePerformanceSerializer
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -105,3 +114,45 @@ class AgentPerformanceView(APIView):
         serializer = AgentPerformanceSerializer(agent)
         print("Données sérialisées :", serializer.data)
         return Response(serializer.data)
+
+# 1) Objectifs de l'agent connecté
+class AgentObjectifsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent = request.user
+        objectifs = Objectif.objects.filter(agent=agent).select_related('indicateur', 'service', 'periode')
+        serializer = ObjectifSerializer(objectifs, many=True)
+        return Response(serializer.data)
+
+# 2) Feedbacks (réalisations qui ont un feedback)
+class AgentFeedbacksAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent = request.user
+        realisations = (
+            Realisation.objects
+            .filter(agent=agent)
+            .exclude(feedback__isnull=True)
+            .select_related('objectif', 'objectif__service')
+        )
+        serializer = RealisationSerializer(realisations, many=True)
+        return Response(serializer.data)
+
+# 3) Historique des performances de l'agent
+class AgentHistoriquePerformanceAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent = request.user
+        historiques = HistoriquePerformance.objects.filter(agent=agent).order_by('-date_calcul')
+        # si tu n'as pas encore de serializer, retourne un JSON minimal :
+        data = [
+            {
+                "date": h.date_calcul,
+                "performance": float(h.performance)
+            } for h in historiques
+        ]
+        return Response(data)
+

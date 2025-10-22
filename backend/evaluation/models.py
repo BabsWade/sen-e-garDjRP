@@ -25,12 +25,16 @@ class Evaluation(models.Model):
     def __str__(self):
         return f"Évaluation de {self.agent} par {self.responsable}"
 
+    class Meta:
+        verbose_name = "Évaluation de performance"
+        verbose_name_plural = "Évaluations de performance"
+
 
 class NoteFinale(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
     note_finale = models.DecimalField(max_digits=5, decimal_places=2)  # Note finale pondérée
     commentaire = models.TextField()  # Commentaire final du responsable
-    date_valuation = models.DateTimeField(auto_now_add=True)  # Date de l'enregistrement de la note finale
+    date_evaluation = models.DateTimeField(auto_now_add=True)  # Date de l'enregistrement de la note finale
     date_soumission = models.DateTimeField(null=True, blank=True, default=datetime.now)  # Peut être vide
 
     def __str__(self):

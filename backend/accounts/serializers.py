@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Agent
+from .models import Agent, HistoriquePerformance
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
@@ -52,10 +52,31 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
         return user
 
 class AgentPerformanceSerializer(serializers.ModelSerializer):
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+    responsable_nom = serializers.SerializerMethodField()
+
     class Meta:
         model = Agent
-        fields = ['id', 'matricule', 'nom', 'prenom', 'performance_moyenne']
+        fields = [
+            'id',
+            'matricule',
+            'nom',
+            'prenom',
+            'performance_moyenne',
+            'service_nom',
+            'responsable_nom',
+        ]
         read_only_fields = ['performance_moyenne']
 
+    def get_responsable_nom(self, obj):
+        """
+        Retourne le nom complet du responsable hiérarchique s’il existe.
+        """
+        if obj.responsable:
+            return f"{obj.responsable.nom} {obj.responsable.prenom}"
+        return "Non défini"
 
-
+class HistoriquePerformanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoriquePerformance
+        fields = ['id', 'agent', 'performance', 'date_calcul']

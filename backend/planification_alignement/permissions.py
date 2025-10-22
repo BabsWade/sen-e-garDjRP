@@ -1,5 +1,8 @@
 from rest_framework import permissions
 
+from planification_alignement.models import Objectif
+
+
 class ObjectifAccessPermission(permissions.BasePermission):
     """
     Restriction des accès aux objectifs :
@@ -22,6 +25,7 @@ class ObjectifAccessPermission(permissions.BasePermission):
 
         if user.role == 'RESPONSABLE_N1':
             # Vérifie si l’agent est sous sa supervision
-            return obj.agent.responsable_matricule == user.matricule
+            #return obj.agent.responsable_matricule == user.matricule
+            return Objectif.objects.filter(agent__responsable=user)
 
         return False

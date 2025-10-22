@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Periode, Service, Objectif, Indicateur
 
+from rest_framework import serializers
+from accounts.models import Agent, HistoriquePerformance
 
 
 class PeriodeSerializer(serializers.ModelSerializer):
@@ -42,3 +44,40 @@ class ObjectifSerializer(serializers.ModelSerializer):
         ]
         # selon ta logique, tu peux rendre certains champs read_only
         read_only_fields = ['agent', 'service', 'est_valide', 'date_validation', 'taux_avancement']
+
+
+class AgentPerformanceSerializer(serializers.ModelSerializer):
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+    responsable_nom = serializers.SerializerMethodField()
+    performance_moyenne = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Agent
+        fields = [
+            'id',
+            'matricule',
+            'nom',
+            'prenom',
+            'performance_moyenne',
+            'service_nom',
+            'responsable_nom',
+        ]
+
+    def get_responsable_nom(self, obj):
+        """
+        Retourne le nom complet du responsable hiérarchique s’il existe.
+        """
+        if obj.responsable:
+            return f"{obj.responsable.nom} {obj.responsable.prenom}"
+        return "Non défini"
+
+    def get_performance_moyenne(self, obj):
+        """
+        Retourne la performance pondérée comme un nombre.
+        """
+        return float(obj.performance_moyenne)
+
+class HistoriquePerformanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoriquePerformance
+        fields = ['id', 'agent', 'performance', 'date_calcul']

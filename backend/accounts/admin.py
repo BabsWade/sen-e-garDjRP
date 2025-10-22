@@ -93,10 +93,10 @@ class EvaluationAdmin(admin.ModelAdmin):
 
 @admin.register(NoteFinale)
 class NoteFinaleAdmin(admin.ModelAdmin):
-    list_display = ('agent', 'note_finale', 'commentaire', 'date_valuation')
-    list_filter = ('date_valuation',)
+    list_display = ('agent', 'note_finale', 'commentaire', 'date_evaluation')
+    list_filter = ('date_evaluation',)
     search_fields = ('agent__nom',)
-    ordering = ('-date_valuation',)
+    ordering = ('-date_evaluation',)
 
 @admin.register(Contestation)
 class ContestationAdmin(admin.ModelAdmin):

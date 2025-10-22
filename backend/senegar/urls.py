@@ -20,7 +20,9 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from accounts.views import MyTokenObtainPairView
+from accounts.views import (MyTokenObtainPairView, AgentObjectifsAPIView,
+    AgentFeedbacksAPIView,
+    AgentHistoriquePerformanceAPIView,)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -36,6 +38,8 @@ urlpatterns = [
     path('api/', include('planification_alignement.urls')),  # ← Assure-toi que ceci est présent
     path('api/', include('suivi_execution.urls')),  # 👈 AJOUTE CELUI-CI
     path('api/', include('evaluation.urls')),  # 👈 AJOUTE CELUI-CI
-
+path('api/agent-objectifs/', AgentObjectifsAPIView.as_view(), name='agent-objectifs-root'),
+    path('api/agent-feedbacks/', AgentFeedbacksAPIView.as_view(), name='agent-feedbacks-root'),
+    path('api/agent-historique-performances/', AgentHistoriquePerformanceAPIView.as_view(), name='agent-historique-root'),
 
 ]
