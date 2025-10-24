@@ -1,25 +1,44 @@
 // src/components/Sidebar.tsx
-// src/components/Sidebar.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Drawer, List, ListItem, ListItemButton, ListItemText, Toolbar, Divider } from '@mui/material';
+
+const drawerWidth = 240;
 
 const Sidebar: React.FC = () => {
-    return (
-        <nav className="sidebar">
-            <ul>
-                <li><Link to="/objectifs">Mes Objectifs</Link></li>
-                <li><Link to="/objectifs/create">Proposer un Objectif</Link></li>
-                <li><Link to="/realisations">Mes Réalisations</Link></li>
-                <li><Link to="/realisations/create">Saisir une Réalisation</Link></li>
-                <li><Link to="/auto-evaluation">Auto‑Évaluation</Link></li>
-                <li><Link to="/evaluation">Évaluation Finale</Link></li>
-                <li><Link to="/contestation">Contester Évaluation</Link></li>
-                <li><Link to="/historique">Historique</Link></li>
-                <li><Link to="/notifications">Notifications</Link></li>
-                <li><Link to="/profil">Mon Profil</Link></li>
-            </ul>
-        </nav>
-    );
+  return (
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: drawerWidth,
+        flexShrink: 0,
+        [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+      }}
+    >
+      <Toolbar />
+      <Divider />
+      <List>
+        {[
+          { text: 'Mes Objectifs', path: '/objectifs' },
+          { text: 'Proposer un Objectif', path: '/objectifs/create' },
+          { text: 'Mes Réalisations', path: '/realisations' },
+          { text: 'Saisir une Réalisation', path: '/realisations/create' },
+          { text: 'Auto‑Évaluation', path: '/auto-evaluation' },
+          { text: 'Évaluation Finale', path: '/evaluation' },
+          { text: 'Contester Évaluation', path: '/contestation' },
+          { text: 'Historique', path: '/historique' },
+          { text: 'Notifications', path: '/notifications' },
+          { text: 'Mon Profil', path: '/profil' },
+        ].map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton component={Link} to={item.path}>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </Drawer>
+  );
 };
 
 export default Sidebar;

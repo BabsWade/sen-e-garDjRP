@@ -68,7 +68,7 @@ const CreateRealisationPage: React.FC = () => {
 
   return (
     <div>
-           <Sidebar />
+       
       <h2>Nouvelle Réalisation</h2>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
       <form onSubmit={handleSubmit} encType="multipart/form-data">
@@ -98,20 +98,7 @@ const CreateRealisationPage: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label>Taux d’avancement (%)</label>
-          <input
-            type="number"
-            name="taux_avancement"
-            value={tauxAvancement}
-            onChange={(e) => setTauxAvancement(e.target.value)}
-            min="0"
-            max="100"
-            step="1"
-            required
-          />
-        </div>
-
+      
         <div>
           <label>Preuve (document / fichier)</label>
           <input

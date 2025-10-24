@@ -24,106 +24,115 @@ import AutoEvaluationPage from './pages/AutoEvaluationPage';
 import ConsulterEvaluationPage from './pages/ConsulterEvaluationPage';
 import ContestationPage from './pages/ContestationPage';
 import Dashboard from './components/Dashboard';
+import ObjectifDetails from './pages/ObjectifDetails';
 
 const App: React.FC = () => {
   return (
-    <Routes>
+    <div>
 
-      {/* Routes publiques */}
-      <Route path="/" element={<Navigate to="/login" />} />
-      <Route path="/activation/:uid/:token" element={<ActivationPage />} />
-      <Route path="/registration-success" element={<RegistrationSuccess />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Routes>
 
-      {/* Routes protégées par rôle */}
+        {/* Routes publiques */}
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/activation/:uid/:token" element={<ActivationPage />} />
+        <Route path="/registration-success" element={<RegistrationSuccess />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/n1-dashboard"
-        element={<PrivateRoute element={<N1Dashboard />} roles={['RESPONSABLE_N1']} />}
-      />
-      <Route
-        path="/drh-dashboard"
-        element={<PrivateRoute element={<DRHDashboard />} roles={['DRH']} />}
-      />
-      <Route
-        path="/admin-dashboard"
-        element={<PrivateRoute element={<AdminDashboard />} roles={['ADMIN']} />}
-      />
+        {/* Routes protégées par rôle */}
 
-      {/* Pour l’Agent, les pages avec Navbar */}
-      <Route
-        path="/objectifs"
-        element={<PrivateRoute element={<><Navbar /><ObjectifsPage /></>} roles={['ADMIN', 'AGENT', 'DRH']} />}
-      />
-      <Route
-        path="/creer-objectifs"
-        element={<PrivateRoute element={<><Navbar /><CreerObjectif /></>} roles={['ADMIN', 'AGENT', 'DRH']} />}
-      />
-      <Route
-        path="/agent-home"
-        element={<PrivateRoute element={<AgentHome />} roles={['AGENT']} />}
-      />
+        <Route
+          path="/n1-dashboard"
+          element={<PrivateRoute element={<N1Dashboard />} roles={['RESPONSABLE_N1']} />}
+        />
+        <Route
+          path="/drh-dashboard"
+          element={<PrivateRoute element={<DRHDashboard />} roles={['DRH']} />}
+        />
+        <Route
+          path="/admin-dashboard"
+          element={<PrivateRoute element={<AdminDashboard />} roles={['ADMIN']} />}
+        />
 
-      <Route
-        path="/objectifs/create"
-        element={<PrivateRoute element={<><Navbar /><CreateObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN']} />}
-      />
-      <Route
-        path="/objectifs/:id/edit"
-        element={<PrivateRoute element={<><Navbar /><EditObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN']} />}
-      />
+        {/* Pour l’Agent, les pages avec Navbar */}
+        <Route
+          path="/objectifs"
+          element={<PrivateRoute element={<><Navbar /><ObjectifsPage /></>} roles={['ADMIN', 'AGENT', 'DRH']} />}
+        />
+        <Route
+          path="/creer-objectifs"
+          element={<PrivateRoute element={<><Navbar /><CreerObjectif /></>} roles={['ADMIN', 'AGENT', 'DRH']} />}
+        />
+        <Route
+          path="/agent-home"
+          element={<PrivateRoute element={<AgentHome />} roles={['AGENT']} />}
+        />
 
-      {/* Routes Suivi & Exécution (réalisations) */}
-      <Route
-        path="/realisations"
-        element={<PrivateRoute element={<><Navbar /><RealisationsPage /></>} roles={['AGENT']} />}
-      />
-      <Route
-        path="/realisations/create"
-        element={<PrivateRoute element={<><Navbar /><CreateRealisationPage /></>} roles={['AGENT']} />}
-      />
-      <Route
-        path="/realisations/:id/edit"
-        element={<PrivateRoute element={<><Navbar /><EditRealisationPage /></>} roles={['AGENT']} />}
-      />
+        <Route
+          path="/objectifs/create"
+          element={<PrivateRoute element={<><Navbar /><CreateObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN']} />}
+        />
+        <Route
+          path="/objectifs/:id/edit"
+          element={<PrivateRoute element={<><Navbar /><EditObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN']} />}
+        />
+
+        {/* Routes Suivi & Exécution (réalisations) */}
+        <Route
+          path="/realisations"
+          element={<PrivateRoute element={<><Navbar /><RealisationsPage /></>} roles={['AGENT']} />}
+        />
+        <Route
+          path="/realisations/create"
+          element={<PrivateRoute element={<><Navbar /><CreateRealisationPage /></>} roles={['AGENT']} />}
+        />
+        <Route
+          path="/realisations/:id/edit"
+          element={<PrivateRoute element={<><Navbar /><EditRealisationPage /></>} roles={['AGENT']} />}
+        />
 
 
-      <Route
-        path="/auto-evaluation"
-        element={<PrivateRoute element={<><Navbar /><AutoEvaluationPage /></>} roles={['AGENT']} />}
-      />
+        <Route
+          path="/auto-evaluation"
+          element={<PrivateRoute element={<><Navbar /><AutoEvaluationPage /></>} roles={['AGENT']} />}
+        />
 
-      {/* Vous pouvez aussi ajouter d’autres pages agent protégées ici */}
+        {/* Vous pouvez aussi ajouter d’autres pages agent protégées ici */}
 
-      {/* Route fallback */}
-      <Route path="*" element={<h2>Page non trouvée</h2>} />
+        {/* Route fallback */}
+        <Route path="*" element={<h2>Page non trouvée</h2>} />
 
-      <Route path="evaluation" element={<ConsulterEvaluationPage />} />
-      <Route
-        path="/contestation"
-        element={<PrivateRoute element={<><Navbar /><ContestationPage /></>} roles={['AGENT']} />}
-      />
+        <Route path="evaluation" element={<ConsulterEvaluationPage />} />
+        <Route
+          path="/contestation"
+          element={<PrivateRoute element={<><Navbar /><ContestationPage /></>} roles={['AGENT']} />}
+        />
 
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute
-            element={<Dashboard objectifs={[]} performance_moyenne={0} />}
-            roles={['AGENT']}
-          />
-        }
-      />      <Route
-        path="/agent-dashboard"
-        element={
-          <PrivateRoute
-            element={<AgentDashboard />}
-            roles={['AGENT']}
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute
+              element={<Dashboard objectifs={[]} performance_moyenne={0} />}
+              roles={['AGENT']}
+            />
+          }
+        />      <Route
+          path="/agent-dashboard"
+          element={
+            <PrivateRoute
+              element={<AgentDashboard />}
+              roles={['AGENT']}
 
-          />
-        }
-      />
-    </Routes>
+            />
+          }
+        />
+
+
+
+        <Route path="/objectifs/:id" element={<ObjectifDetails />} />
+
+      </Routes>
+    </div>
   );
 };
 

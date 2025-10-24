@@ -46,7 +46,7 @@ const AgentHome: React.FC = () => {
 
     return (
         <div className="agent-home">
-            <Sidebar />
+        
             <main>
                 <Dashboard objectifs={objectifs} performance_moyenne={performance} />
                 <Notifications notifications={notifications} />

@@ -40,7 +40,7 @@ const RealisationsPage: React.FC = () => {
 
   return (
     <div>
-           <Sidebar />
+        
       <h1>Mes Réalisations</h1>
       {loading ? (
         <p>Loading …</p>

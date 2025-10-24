@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Periode, Service, Objectif, Indicateur
+from .models import Periode, Service, Objectif, Indicateur, PlanStrategique, ObjectifProgramme
 
 from rest_framework import serializers
 from accounts.models import Agent, HistoriquePerformance
@@ -20,6 +20,22 @@ class IndicateurSerializer(serializers.ModelSerializer):
         model = Indicateur
         fields = ['id', 'code', 'libelle', 'description', 'type_kpi', 'cible']
 
+class PlanStrategiqueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlanStrategique
+        fields = '__all__'
+
+class ObjectifProgrammeSerializer(serializers.ModelSerializer):
+    plan_strategique = PlanStrategiqueSerializer(read_only=True)
+    plan_strategique_id = serializers.PrimaryKeyRelatedField(
+        source='plan_strategique',
+        queryset=PlanStrategique.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True)
+    class Meta:
+        model = ObjectifProgramme
+        fields = '__all__'
 
 class ObjectifSerializer(serializers.ModelSerializer):
     indicateur = IndicateurSerializer(read_only=True)
@@ -34,20 +50,19 @@ class ObjectifSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Objectif
-        fields = [
-            'id', 'libelle', 'type_kpi', 'cible', 'poids',
-            'service', 'agent', 'periode',
-            'est_valide', 'est_rejete', 'commentaire_rejet', 'date_validation',
-            'competences_comportementales',
-            'indicateur', 'indicateur_id',
-            'taux_avancement',
-        ]
+        fields = '__all__'
         # selon ta logique, tu peux rendre certains champs read_only
-        read_only_fields = ['agent', 'service', 'est_valide', 'date_validation', 'taux_avancement']
+        read_only_fields = ['agent', 'statut', 'date_validation', 'date_debut', 'taux_avancement']
 
+    def get_est_valide(self, obj):
+        return obj.statut == 'valide'
+
+    def get_est_rejete(self, obj):
+        return obj.statut == 'rejete'
 
 class AgentPerformanceSerializer(serializers.ModelSerializer):
-    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True,  required=False,
+        allow_null=True)
     responsable_nom = serializers.SerializerMethodField()
     performance_moyenne = serializers.SerializerMethodField()
 
@@ -81,3 +96,4 @@ class HistoriquePerformanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoriquePerformance
         fields = ['id', 'agent', 'performance', 'date_calcul']
+

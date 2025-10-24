@@ -11,6 +11,8 @@ from reporting.models import AuditLog, UserRole, ExportedData, Report
 
 from planification_alignement.models import Indicateur
 
+from planification_alignement.models import PlanStrategique, ObjectifProgramme
+
 
 # accounts/admin.py
 
@@ -42,6 +44,8 @@ class AgentAdmin(UserAdmin):
 
     ordering = ('matricule',)
     readonly_fields = ('last_login',)
+
+
 @admin.register(Periode)
 class PeriodeAdmin(admin.ModelAdmin):
     list_display = ('id', 'libelle_periode', 'date_debut', 'date_fin')
@@ -57,18 +61,48 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Objectif)
 class ObjectifAdmin(admin.ModelAdmin):
-    list_display = ('id', 'libelle', 'type_kpi', 'cible', 'poids', 'annee', 'service', 'agent', 'periode', 'taux_avancement', 'est_valide', 'est_rejete')
-    list_filter = ('type_kpi', 'annee', 'est_valide', 'est_rejete', 'service')
+    list_display = (
+        'id', 'libelle', 'type_kpi', 'cible', 'poids', 'annee',
+        'date_delai', 'date_debut', 'service', 'agent', 'periode',
+        'taux_avancement', 'statut'
+    )
+    list_filter = ('type_kpi', 'annee', 'statut', 'service')
     search_fields = ('libelle', 'cible', 'service__nom_service', 'agent__nom')
     ordering = ('annee', 'type_kpi')
     readonly_fields = ('annee',)
     exclude = ('taux_avancement',)  # Empêche la modification manuelle
 
+    def get_fields(self, request, obj=None):
+        """
+        Affiche 'commentaire_rejet' uniquement si le statut est 'rejete'
+        """
+        fields = [
+            'libelle', 'type_kpi', 'cible', 'poids', 'annee',
+            'date_debut', 'date_delai', 'type_objectif',
+            'service', 'agent', 'periode', 'statut',
+            'date_validation', 'competences_comportementales',
+            'performance_moyenne', 'indicateur', 'objectif_programme',
+            'plan_strategique'
+        ]
+
+        # Si l’objectif est rejeté, on affiche le champ commentaire_rejet
+        if obj and obj.statut == 'rejete':
+            fields.append('commentaire_rejet')
+
+        return fields
+
     def save_model(self, request, obj, form, change):
-        # Si c’est une création (change = False) ou si l’annee n’est pas renseignée
+        """
+        Met à jour automatiquement l'année à partir de la période
+        """
         if obj.periode:
             obj.annee = obj.periode.date_debut.year
         super().save_model(request, obj, form, change)
+
+    class Media:
+        js = ('admin/js/objectif_admin.js',)
+
+
 @admin.register(Realisation)
 class RealisationAdmin(admin.ModelAdmin):
     list_display = ('id', 'objectif', 'agent', 'est_valide', 'est_rejete', 'date_soumission', 'date_validation')
@@ -141,3 +175,11 @@ class HistoriquePerformanceAdmin(admin.ModelAdmin):
     list_filter = ('agent',)
     search_fields = ('agent__matricule', 'agent__nom', 'agent__prenom')
     ordering = ('-date_calcul',)
+
+@admin.register(PlanStrategique)
+class PlanStrategiqueAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'description', 'date_debut', 'date_fin', 'vision')
+
+@admin.register(ObjectifProgramme)
+class ObjectifProgrammeAdmin(admin.ModelAdmin):
+    list_display = ('intitule', 'resultat_attendu', 'plan_strategique', 'indicateur' )

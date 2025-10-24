@@ -81,7 +81,7 @@ class Agent(AbstractBaseUser, PermissionsMixin):
         """
         from decimal import Decimal
 
-        objectifs = self.objectif_set.filter(est_valide=True)
+        objectifs = self.objectif_set.filter(statut = 'valide')
 
         if not objectifs.exists():
             self.performance_moyenne = 0
