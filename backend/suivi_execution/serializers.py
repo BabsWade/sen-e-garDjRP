@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Realisation
+from .models import Realisation, Notification
 
 
 class RealisationSerializer(serializers.ModelSerializer):
@@ -14,3 +14,22 @@ class RealisationSerializer(serializers.ModelSerializer):
         if obj.objectif:
             return obj.objectif.libelle
         return None
+
+class NotificationSerializer(serializers.ModelSerializer):
+    agent_nom_complet = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'agent',
+            'agent_nom_complet',
+            'message',
+            'date_envoi',
+            'statut',
+            'lue_le',
+        ]
+        read_only_fields = ['date_envoi', 'lue_le']
+
+    def get_agent_nom_complet(self, obj):
+        return f"{obj.agent.nom} {obj.agent.prenom}"

@@ -1,13 +1,24 @@
 // src/pages/EditObjectifPage.tsx
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  Paper,
+  MenuItem,
+  CircularProgress,
+} from '@mui/material';
+import { Edit as EditIcon } from '@mui/icons-material';
+import Sidebar from '../components/Sidebar';
+import Topbar from '../components/Topbar';
 import api from '../api';
 
 interface PeriodeOption {
   id: number;
-  libelle?: string;
-  nom?: string;
-  // selon ce que ton back renvoie pour les périodes
+  libelle_periode: string;
 }
 
 interface ObjectifData {
@@ -16,8 +27,9 @@ interface ObjectifData {
   cible: string;
   poids: string;
   periode: string;
-  // tu peux ajouter d'autres champs si ton API les renvoie, ex : service, annee, etc.
 }
+
+const drawerWidth = 300;
 
 const EditObjectifPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -99,79 +111,160 @@ const EditObjectifPage: React.FC = () => {
   }
 
   return (
-    <div>
-      <h2>Modifier Objectif</h2>
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Libellé</label>
-          <input
-            type="text"
-            name="libelle"
-            value={objectif.libelle}
-            onChange={handleChange}
-            required
-          />
-        </div>
+    <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      {/* --- SIDEBAR --- */}
+      <Sidebar mobileOpen={false} handleDrawerToggle={() => { }} />
 
-        <div>
-          <label>Type KPI</label>
-          <select
-            name="type_kpi"
-            value={objectif.type_kpi}
-            onChange={handleChange}
-            required
+      {/* --- CONTENU PRINCIPAL --- */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* --- TOPBAR --- */}
+        <Topbar title="Modifier un Objectif" handleDrawerToggle={() => { }} />
+
+        {/* --- FORMULAIRE --- */}
+        <Box sx={{ mt: { xs: '120px', md: '80px' }, p: { xs: 2, md: 4 } }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: { xs: 3, md: 5 },
+              borderRadius: 3,
+              maxWidth: 800,
+              mx: 'auto',
+              backgroundColor: '#fff',
+            }}
           >
-            <option value="">-- Choisir --</option>
-            <option value="Quantitatif">Quantitatif</option>
-            <option value="Qualitatif">Qualitatif</option>
-            <option value="Délai">Délai</option>
-          </select>
-        </div>
+            <Typography
+              variant="h5"
+              sx={{
+                mb: 4,
+                color: '#0f172a',
+                fontWeight: 'bold',
+                textAlign: 'center',
+              }}
+            >
+              ✏️ Modifier un objectif
+            </Typography>
 
-        <div>
-          <label>Cible</label>
-          <input
-            type="text"
-            name="cible"
-            value={objectif.cible}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            {errorMessage && (
+              <Typography
+                variant="body2"
+                color="error"
+                sx={{ mb: 2, textAlign: 'center' }}
+              >
+                {errorMessage}
+              </Typography>
+            )}
 
-        <div>
-          <label>Poids (%)</label>
-          <input
-            type="number"
-            step="0.01"
-            name="poids"
-            value={objectif.poids}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                {/* Libellé */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Libellé"
+                    name="libelle"
+                    fullWidth
+                    required
+                    value={objectif.libelle}
+                    onChange={handleChange}
+                  />
+                </Grid>
 
-        <div>
-          <label>Période</label>
-          <select
-            name="periode"
-            value={objectif.periode}
-            onChange={handleChange}
-            required
-          >
-            <option value="">-- Choisir une période --</option>
-            {periodes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.libelle ?? p.nom ?? `Période ${p.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+                {/* Type KPI & Cible */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Type KPI"
+                    name="type_kpi"
+                    fullWidth
+                    required
+                    select
+                    value={objectif.type_kpi}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="Quantitatif">Quantitatif</MenuItem>
+                    <MenuItem value="Qualitatif">Qualitatif</MenuItem>
+                    <MenuItem value="Délai">Délai</MenuItem>
+                  </TextField>
+                </Grid>
 
-        <button type="submit">Enregistrer</button>
-      </form>
-    </div>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Cible"
+                    name="cible"
+                    fullWidth
+                    required
+                    value={objectif.cible}
+                    onChange={handleChange}
+                    type="number"
+                  />
+                </Grid>
+
+                {/* Poids */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Poids"
+                    name="poids"
+                    fullWidth
+                    required
+                    value={objectif.poids}
+                    onChange={handleChange}
+                    type="number"
+                  />
+                </Grid>
+
+                {/* Période */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Période"
+                    name="periode"
+                    select
+                    fullWidth
+                    required
+                    value={objectif.periode}
+                    onChange={handleChange}
+                  >
+                    {periodes.map((p) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.libelle_periode}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+
+                {/* Bouton centré */}
+                <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    startIcon={<EditIcon />}
+                    sx={{
+                      bgcolor: '#1976d2',
+                      '&:hover': { bgcolor: '#115293' },
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1,
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      'Enregistrer les modifications'
+                    )}
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </Paper>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

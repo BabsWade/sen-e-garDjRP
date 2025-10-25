@@ -1,4 +1,3 @@
-// src/pages/EditRealisationPage.tsx
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -11,7 +10,6 @@ interface ObjectifOption {
 interface RealisationData {
   description: string;
   taux_avancement: string;
-  // preuve sera facultatif : on pourra avoir un lien vers le fichier existant
   objectif: string;
 }
 
@@ -33,20 +31,20 @@ const EditRealisationPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // charger la réalisation existante
         const resp = await api.get(`/realisations/${id}/`);
         const data = resp.data;
+
         setRealisation({
           description: data.description ?? '',
           taux_avancement: data.taux_avancement?.toString() ?? '',
           objectif: data.objectif?.id?.toString() ?? '',
         });
+
         if (data.preuve) {
           setExistingPreuveUrl(data.preuve);
         }
 
-        // charger les objectifs pour choix (optionnel si on veut permettre de changer l’objectif)
-        const respObj = await api.get('/objectifs/');
+        const respObj = await api.get('/agent-objectifs/');
         setObjectifs(respObj.data);
       } catch (error: any) {
         console.error('Erreur chargement réalisation :', error);
@@ -91,7 +89,9 @@ const EditRealisationPage: React.FC = () => {
       };
 
       await api.put(`/realisations/${id}/`, formData, config);
-      navigate('/realisations');
+
+      // Redirection : retour vers la page détail de l’objectif concerné
+      navigate(`/objectifs/${realisation.objectif}`);
     } catch (error: any) {
       console.error('Erreur mise à jour réalisation :', error);
       if (error.response && error.response.data) {
@@ -102,17 +102,16 @@ const EditRealisationPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <p>Loading …</p>;
-  }
+  if (loading) return <p>Chargement…</p>;
 
   return (
-    <div>
-      <h2>Modifier Réalisation</h2>
+    <div style={{ maxWidth: 600, margin: '2em auto' }}>
+      <h2>Modifier la Réalisation</h2>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+
       <form onSubmit={handleSubmit} encType="multipart/form-data">
         <div>
-          <label>Objectif</label>
+          <label>Objectif lié</label>
           <select
             name="objectif"
             value={realisation.objectif}
@@ -128,32 +127,20 @@ const EditRealisationPage: React.FC = () => {
           </select>
         </div>
 
-        <div>
+        <div style={{ marginTop: '1em' }}>
           <label>Description</label>
           <textarea
             name="description"
             value={realisation.description}
             onChange={handleChange}
             required
+            rows={4}
+            style={{ width: '100%' }}
           />
         </div>
 
-        <div>
-          <label>Taux d’avancement (%)</label>
-          <input
-            name="taux_avancement"
-            type="number"
-            value={realisation.taux_avancement}
-            onChange={handleChange}
-            min="0"
-            max="100"
-            step="1"
-            required
-          />
-        </div>
-
-        <div>
-          <label>Preuve existante</label>
+        <div style={{ marginTop: '1em' }}>
+          <label>Preuve existante : </label>
           {existingPreuveUrl ? (
             <div>
               <a href={existingPreuveUrl} target="_blank" rel="noopener noreferrer">
@@ -165,7 +152,7 @@ const EditRealisationPage: React.FC = () => {
           )}
         </div>
 
-        <div>
+        <div style={{ marginTop: '1em' }}>
           <label>Charger une nouvelle preuve (facultatif)</label>
           <input
             name="preuve"
@@ -175,7 +162,14 @@ const EditRealisationPage: React.FC = () => {
           />
         </div>
 
-        <button type="submit">Enregistrer</button>
+        <div style={{ marginTop: '2em' }}>
+          <button type="submit" style={{ marginRight: '1em' }}>
+            Enregistrer
+          </button>
+          <button type="button" onClick={() => navigate(`/objectifs/${realisation.objectif}`)}>
+            Annuler
+          </button>
+        </div>
       </form>
     </div>
   );

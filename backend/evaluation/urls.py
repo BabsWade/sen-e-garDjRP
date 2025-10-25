@@ -9,6 +9,7 @@ router.register(r'auto-evaluations', AutoEvaluationViewSet, basename='auto-evalu
 router.register(r'evaluations', EvaluationViewSet, basename='evaluation')
 router.register(r'note-finales', NoteFinaleViewSet, basename='note-finale')
 router.register(r'contestations', ContestationViewSet, basename='contestation')
+router.register(r'autoevaluations', AutoEvaluationViewSet, basename='autoevaluations')
 
 urlpatterns = [
     path('', include(router.urls)),

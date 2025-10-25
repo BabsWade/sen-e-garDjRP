@@ -1,9 +1,20 @@
-// src/pages/CreateObjectifPage.tsx
-
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  Select,
+  Paper,
+  MenuItem,
+  CircularProgress,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import Sidebar from '../components/Sidebar';
+import Topbar from '../components/Topbar';
+import api from '../api';
 
 interface PeriodeOption {
   id: number;
@@ -18,6 +29,8 @@ interface IndicateurOption {
   code: string;
 }
 
+const drawerWidth = 300;
+
 const CreateObjectifPage: React.FC = () => {
   const [libelle, setLibelle] = useState('');
   const [typeKpi, setTypeKpi] = useState('');
@@ -25,9 +38,9 @@ const CreateObjectifPage: React.FC = () => {
   const [poids, setPoids] = useState('');
   const [periode, setPeriode] = useState('');
   const [periodes, setPeriodes] = useState<PeriodeOption[]>([]);
-
   const [indicateurs, setIndicateurs] = useState<IndicateurOption[]>([]);
-  const [indicateur, setIndicateur] = useState<string>('');  // id de l’indicateur sélectionné
+  const [indicateur, setIndicateur] = useState<string>(''); // id de l’indicateur sélectionné
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -44,7 +57,6 @@ const CreateObjectifPage: React.FC = () => {
     const fetchIndicateurs = async () => {
       try {
         const resp = await api.get('/indicateurs/');
-        console.log('Indicateurs reçus:', resp.data);
         setIndicateurs(resp.data);
       } catch (error) {
         console.error('Erreur chargement indicateurs', error);
@@ -58,11 +70,13 @@ const CreateObjectifPage: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // validation simple côté front (facultative)
+    // Validation simple côté front
     if (!libelle || !typeKpi || !cible || !poids || !periode) {
-      alert('Veuillez remplir les champs requis.');
+      alert('Veuillez remplir tous les champs.');
       return;
     }
+
+    setLoading(true);
 
     const payload: any = {
       libelle,
@@ -71,115 +85,189 @@ const CreateObjectifPage: React.FC = () => {
       poids: parseFloat(poids),
       periode,
     };
+
     if (indicateur) {
       payload.indicateur = indicateur;
     }
 
     try {
-      // tu peux ajouter “/” devant ’objectifs/’ selon la config de api
-      await api.post('objectifs/', payload);
+      await api.post('/objectifs/', payload);
+      alert('Objectif créé avec succès !');
       navigate('/objectifs');
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        console.error('Erreur backend détaillée :', error.response.data);
-        alert("Erreur : " + JSON.stringify(error.response.data, null, 2));
-      } else {
-        console.error('Erreur inconnue :', error);
-        alert("Une erreur est survenue.");
-      }
+    } catch (error) {
+      console.error('Erreur lors de la création de l’objectif :', error);
+      alert('Une erreur est survenue lors de la création de l’objectif.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-         <Sidebar />
-      <h2>Créer un Objectif</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Libellé</label>
-          <input
-            name="libelle"
-            type="text"
-            value={libelle}
-            onChange={(e) => setLibelle(e.target.value)}
-            required
-          />
-        </div>
+    <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      {/* --- SIDEBAR --- */}
+      <Sidebar mobileOpen={false} handleDrawerToggle={() => { }} />
 
-        <div>
-          <label>Type KPI</label>
-          <select
-            name="type_kpi"
-            value={typeKpi}
-            onChange={(e) => setTypeKpi(e.target.value)}
-            required
+      {/* --- CONTENU PRINCIPAL --- */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* --- TOPBAR --- */}
+        <Topbar title="Créer un Objectif" handleDrawerToggle={() => { }} />
+
+        {/* --- FORMULAIRE --- */}
+        <Box sx={{ mt: { xs: '120px', md: '80px' }, p: { xs: 2, md: 4 } }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: { xs: 3, md: 5 },
+              borderRadius: 3,
+              maxWidth: 800,
+              mx: 'auto',
+              backgroundColor: '#fff',
+            }}
           >
-            <option value="">-- Choisir --</option>
-            <option value="Quantitatif">Quantitatif</option>
-            <option value="Qualitatif">Qualitatif</option>
-            <option value="Délai">Délai</option>
-          </select>
-        </div>
+            <Typography
+              variant="h5"
+              sx={{
+                mb: 4,
+                color: '#0f172a',
+                fontWeight: 'bold',
+                textAlign: 'center',
+              }}
+            >
+              📝 Créer un nouvel objectif
+            </Typography>
 
-        <div>
-          <label>Cible</label>
-          <input
-            name="cible"
-            type="text"
-            value={cible}
-            onChange={(e) => setCible(e.target.value)}
-            required
-          />
-        </div>
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                {/* Libellé */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Libellé"
+                    name="libelle"
+                    fullWidth
+                    required
+                    value={libelle}
+                    onChange={(e) => setLibelle(e.target.value)}
+                  />
+                </Grid>
 
-        <div>
-          <label>Poids (%)</label>
-          <input
-            name="poids"
-            type="number"
-            step="0.01"
-            value={poids}
-            onChange={(e) => setPoids(e.target.value)}
-            required
-          />
-        </div>
+                {/* Type KPI & Cible */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Type KPI"
+                    name="type_kpi"
+                    fullWidth
+                    required
+                    select
+                    value={typeKpi}
+                    onChange={(e) => setTypeKpi(e.target.value)}
+                  >
+                    <MenuItem value="Quantitatif">Quantitatif</MenuItem>
+                    <MenuItem value="Qualitatif">Qualitatif</MenuItem>
+                    <MenuItem value="Délai">Délai</MenuItem>
+                  </TextField>
+                </Grid>
 
-        <div>
-          <label>Période</label>
-          <select
-            name="periode"
-            value={periode}
-            onChange={(e) => setPeriode(e.target.value)}
-            required
-          >
-            <option value="">-- Choisir une période --</option>
-            {periodes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.libelle_periode}
-              </option>
-            ))}
-          </select>
-        </div>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Cible"
+                    name="cible"
+                    fullWidth
+                    required
+                    type='number'
+                    value={cible}
+                    onChange={(e) => setCible(e.target.value)}
+                  />
+                </Grid>
 
-        <div>
-          <label>Indicateur stratégique</label>
-          <select
-            name="indicateur"
-            value={indicateur}
-            onChange={(e) => setIndicateur(e.target.value)}
-          >
-            <option value="">-- Aucun indicateur --</option>
-            {indicateurs.map((ind) => (
-              <option key={ind.id} value={ind.id.toString()}>
-                {ind.libelle}
-              </option>
-            ))}
-          </select>
-        </div>
+                {/* Poids */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Poids"
+                    name="poids"
+                    fullWidth
+                    required
+                    type="number"
+                    value={poids}
+                    onChange={(e) => setPoids(e.target.value)}
+                  />
+                </Grid>
 
-        <button type="submit">Soumettre à validation</button>
-      </form>
-    </div>
+                {/* Période */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Période"
+                    name="periode"
+                    select
+                    fullWidth
+                    required
+                    value={periode}
+                    onChange={(e) => setPeriode(e.target.value)}
+                  >
+                    {periodes.map((p) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.libelle_periode}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+
+                {/* Indicateur stratégique */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Indicateur stratégique"
+                    name="indicateur"
+                    select
+                    fullWidth
+                    value={indicateur}
+                    onChange={(e) => setIndicateur(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>-- Aucun indicateur --</em>
+                    </MenuItem>
+                    {indicateurs.map((ind) => (
+                      <MenuItem key={ind.id} value={ind.id.toString()}>
+                        {ind.libelle}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+
+                {/* Bouton centré */}
+                <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    sx={{
+                      bgcolor: '#1976d2',
+                      '&:hover': { bgcolor: '#115293' },
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1,
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      'Créer l’objectif'
+                    )}
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </Paper>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

@@ -13,6 +13,8 @@ from planification_alignement.models import Indicateur
 
 from planification_alignement.models import PlanStrategique, ObjectifProgramme
 
+from suivi_execution.models import Notification
+
 
 # accounts/admin.py
 
@@ -183,3 +185,11 @@ class PlanStrategiqueAdmin(admin.ModelAdmin):
 @admin.register(ObjectifProgramme)
 class ObjectifProgrammeAdmin(admin.ModelAdmin):
     list_display = ('intitule', 'resultat_attendu', 'plan_strategique', 'indicateur' )
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'agent', 'message', 'statut', 'date_envoi', 'lue_le')
+    list_filter = ('statut', 'date_envoi')
+    search_fields = ('agent__nom', 'agent__prenom', 'message')
+    readonly_fields = ('date_envoi', 'lue_le')
+    ordering = ('-date_envoi',)

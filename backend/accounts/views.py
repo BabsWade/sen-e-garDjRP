@@ -151,7 +151,9 @@ class AgentHistoriquePerformanceAPIView(APIView):
         data = [
             {
                 "date": h.date_calcul,
-                "performance": float(h.performance)
+                "performance": float(h.performance),
+
+
             } for h in historiques
         ]
         return Response(data)

@@ -25,11 +25,11 @@ import ConsulterEvaluationPage from './pages/ConsulterEvaluationPage';
 import ContestationPage from './pages/ContestationPage';
 import Dashboard from './components/Dashboard';
 import ObjectifDetails from './pages/ObjectifDetails';
+import Sidebar from './components/Sidebar';
 
 const App: React.FC = () => {
   return (
     <div>
-
       <Routes>
 
         {/* Routes publiques */}

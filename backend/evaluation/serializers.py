@@ -1,6 +1,7 @@
 # evaluation/serializers.py
 from rest_framework import serializers
 from .models import AutoEvaluation, Evaluation, NoteFinale, Contestation
+from rest_framework.exceptions import ValidationError
 
 class AutoEvaluationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,10 +9,43 @@ class AutoEvaluationSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['agent']
 
+    def validate(self, data):
+        user = self.context['request'].user
+        objectif = data.get('objectif')
+
+        # Vérifie que l'objectif appartient bien à l'agent connecté
+        if objectif.agent != user:
+            raise ValidationError("Vous ne pouvez évaluer qu’un objectif qui vous est attribué.")
+
+        # Vérifie que l'objectif est validé
+        if objectif.statut != 'valide':
+            raise ValidationError("Vous ne pouvez auto-évaluer que des objectifs validés.")
+
+        # Empêche la duplication
+        if AutoEvaluation.objects.filter(agent=user, objectif=objectif).exists():
+            raise ValidationError("Auto-évaluation déjà soumise pour cet objectif.")
+
+        return data
+
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['agent'] = user
         return super().create(validated_data)
+
+
+# ✅ Pour la lecture (list/retrieve)
+class AutoEvaluationReadSerializer(serializers.ModelSerializer):
+    objectif_libelle = serializers.CharField(source='objectif.libelle', read_only=True)
+    objectif_type = serializers.CharField(source='objectif.type_kpi', read_only=True)
+    objectif_cible = serializers.CharField(source='objectif.cible', read_only=True)
+
+    class Meta:
+        model = AutoEvaluation
+        fields = [
+            'id', 'objectif', 'objectif_libelle',
+            'objectif_type', 'objectif_cible',
+            'note', 'commentaire'
+        ]
 
 class EvaluationSerializer(serializers.ModelSerializer):
     objectif_libelle = serializers.SerializerMethodField()

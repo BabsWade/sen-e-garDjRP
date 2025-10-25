@@ -24,6 +24,8 @@ from accounts.views import (MyTokenObtainPairView, AgentObjectifsAPIView,
     AgentFeedbacksAPIView,
     AgentHistoriquePerformanceAPIView,)
 
+from suivi_execution import views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
@@ -41,5 +43,6 @@ urlpatterns = [
 path('api/agent-objectifs/', AgentObjectifsAPIView.as_view(), name='agent-objectifs-root'),
     path('api/agent-feedbacks/', AgentFeedbacksAPIView.as_view(), name='agent-feedbacks-root'),
     path('api/agent-historique-performances/', AgentHistoriquePerformanceAPIView.as_view(), name='agent-historique-root'),
+    path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
 
 ]

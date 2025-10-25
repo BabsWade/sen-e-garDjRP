@@ -35,7 +35,7 @@ const Login: React.FC = () => {
       });
 
       const role = userResp.data.role;
-      if (role === 'AGENT') navigate('/agent-home');
+      if (role === 'AGENT') navigate('/agent-dashboard');
       else if (role === 'RESPONSABLE_N1') navigate('/n1-dashboard');
       else if (role === 'DRH') navigate('/drh-dashboard');
       else if (role === 'ADMIN') navigate('/admin-dashboard');

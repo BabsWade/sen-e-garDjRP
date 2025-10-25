@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import PeriodeViewSet, ServiceViewSet, ObjectifViewSet, PerformanceAPIView, IndicateurViewSet, \
     AgentDashboardView, PlanStrategiqueViewSet, ObjectifProgrammeViewSet
+from suivi_execution import views
 
 router = DefaultRouter()
 router.register(r'periodes', PeriodeViewSet)
@@ -16,5 +17,6 @@ urlpatterns = [
     path('performance-agent/', PerformanceAPIView.as_view(), name='performance'),
     # path('performance-agent/', PerformanceAgentAPIView.as_view(), name='performance-agent')
     path('dashboard-agent/', AgentDashboardView.as_view(), name='dashboard-agent'),
+    path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
 
 ]

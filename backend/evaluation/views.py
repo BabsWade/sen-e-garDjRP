@@ -6,12 +6,18 @@ from .serializers import (
     EvaluationSerializer,
     NoteFinaleSerializer,
     ContestationSerializer,
+    AutoEvaluationReadSerializer
 )
 from rest_framework.exceptions import ValidationError
 
 
 class AutoEvaluationViewSet(viewsets.ModelViewSet):
-    serializer_class = AutoEvaluationSerializer
+    """
+    Vue pour permettre à un agent de faire son auto-évaluation GAR.
+    Règles :
+      - L’agent ne peut évaluer que ses objectifs validés.
+      - Une seule auto-évaluation par objectif.
+    """
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -19,14 +25,24 @@ class AutoEvaluationViewSet(viewsets.ModelViewSet):
         return (
             AutoEvaluation.objects
             .select_related('agent', 'objectif')
-            .filter(agent=user)
+            .filter(agent=user, objectif__statut='valide')
         )
+
+    def get_serializer_class(self):
+        # Serializer différent en lecture et écriture
+        if self.action in ['list', 'retrieve']:
+            return AutoEvaluationReadSerializer
+        return AutoEvaluationSerializer
 
     def perform_create(self, serializer):
         user = self.request.user
         objectif = serializer.validated_data.get('objectif')
 
-        # 🧩 Vérifie si l'auto-évaluation existe déjà
+        # Double sécurité (déjà dans le serializer, mais aussi ici)
+        if objectif.agent != user:
+            raise ValidationError("Vous ne pouvez pas auto-évaluer cet objectif.")
+        if objectif.statut != 'valide':
+            raise ValidationError("Vous ne pouvez auto-évaluer que des objectifs validés.")
         if AutoEvaluation.objects.filter(agent=user, objectif=objectif).exists():
             raise ValidationError("Auto-évaluation déjà soumise pour cet objectif.")
 

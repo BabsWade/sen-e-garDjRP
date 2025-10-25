@@ -179,4 +179,5 @@ class AgentDashboardView(APIView):
             "total_objectifs": total_objectifs,
             "note_finale": note_finale,
             "periode_en_cours": periode_nom,
+
         })
