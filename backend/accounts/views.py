@@ -142,6 +142,7 @@ class AgentFeedbacksAPIView(APIView):
 
 # 3) Historique des performances de l'agent
 
+
 class AgentHistoriquePerformanceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -150,27 +151,61 @@ class AgentHistoriquePerformanceAPIView(APIView):
         historiques = HistoriquePerformance.objects.filter(agent=agent).order_by('date_calcul')
 
         data = []
+        dernier_taux = None  # pour détecter les variations
+        derniere_perf = None
+
         for h in historiques:
-            # Tous les objectifs actifs à la date donnée
+            # Objectifs actifs à cette date
             objectifs = Objectif.objects.filter(agent=agent, date_debut__lte=h.date_calcul)
 
             total_cible = 0
             total_realise = 0
 
             for obj in objectifs:
-                # 🔹 Récupérer les réalisations validées liées à cet objectif
-                realisations_valides = Realisation.objects.filter(objectif=obj, est_valide=True)
-                # 🔹 Compter combien ont été validées
-                total_realise += realisations_valides.count()
-                # 🔹 Ajouter la cible de l’objectif
-                total_cible += getattr(obj, 'cible', 0) or 0  # protège contre None
+                # Réalisations validées jusqu'à cette date
+                realisations_valides = Realisation.objects.filter(
+                    objectif=obj,
+                    est_valide=True,
+                    date_validation__lte=h.date_calcul
+                ).count()
+
+                total_realise += realisations_valides
+                total_cible += getattr(obj, 'cible', 0) or 0
 
             taux_realisations_valides = round((total_realise / total_cible) * 100, 2) if total_cible else 0
 
-            data.append({
-                "date_calcul": h.date_calcul,
-                "performance": float(h.performance),
-                "taux_realisations_valides": taux_realisations_valides
-            })
+            # Ajoute un point uniquement si le taux ou la performance a changé
+            if (
+                not data  # premier point
+                or taux_realisations_valides != dernier_taux
+                or float(h.performance) != derniere_perf
+            ):
+                data.append({
+                    "date_calcul": h.date_calcul,
+                    "performance": float(h.performance),
+                    "taux_realisations_valides": taux_realisations_valides
+                })
+                dernier_taux = taux_realisations_valides
+                derniere_perf = float(h.performance)
 
         return Response(data)
+
+
+class SubordonnesListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # Vérification du rôle
+        if user.role != 'RESPONSABLE_N1':
+            return Response(
+                {"detail": "Accès non autorisé. Réservé aux responsables hiérarchiques."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Récupérer les agents sous sa supervision
+        subordonnes = Agent.objects.filter(responsable=user)
+
+        serializer = AgentPerformanceSerializer(subordonnes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -35,9 +35,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'accounts',
     'planification_alignement',  # Ajout de l'application F2
-    'suivi_execution',  # Ajout de l'application F3
+    #'suivi_execution',  # Ajout de l'application F3
     #'performance',
-    'evaluation',
+    #'evaluation',
     'reporting',
     'corsheaders',
     'django.contrib.admin',
@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'suivi_execution.apps.SuiviExecutionConfig',
+    'evaluation.apps.EvaluationConfig',
 ]
 
 MIDDLEWARE = [

@@ -76,45 +76,60 @@ class Agent(AbstractBaseUser, PermissionsMixin):
 
     def calculer_performance_ponderee(self, seuil_variation=1.0):
         """
-        Calcule la performance pondérée de l'agent.
-        Enregistre un nouvel HistoriquePerformance uniquement si la variation
-        dépasse ±seuil_variation (%).
+        Calcule la performance pondérée et le taux de réalisations validées.
+        Crée un nouvel historique si variation >= seuil sur l'une des deux valeurs.
         """
         from decimal import Decimal
+        from planification_alignement.models import Objectif
+        from suivi_execution.models import Realisation
 
-        objectifs = self.objectif_set.filter(statut = 'valide')
+        #objectifs = self.objectif_set.filter(statut='valide')
+        objectifs = self.objectifs_planification.filter(statut='valide')
 
         if not objectifs.exists():
-            self.performance_moyenne = 0
-            self.save(update_fields=['performance_moyenne'])
-            if not self.historique_performances.exists():
-                HistoriquePerformance.objects.create(agent=self, performance=0)
-            return self.performance_moyenne
-
-        numerator = 0.0
-        denom = 0.0
-        for obj in objectifs:
-            taux = float(obj.taux_avancement)
-            poids = float(obj.poids)
-            numerator += taux * poids
-            denom += poids
-
-        performance = numerator / denom if denom > 0 else 0.0
-
-        dernier_historique = self.historique_performances.order_by('-date_calcul').first()
-
-        if not dernier_historique:
-            HistoriquePerformance.objects.create(agent=self, performance=performance)
+            perf = 0
+            taux_realisations = 0
         else:
-            ancienne_perf = float(dernier_historique.performance)
-            variation = abs(performance - ancienne_perf)
+            # --- Calcul de la performance pondérée
+            numerator = 0.0
+            denom = 0.0
+            total_cible = 0
+            total_realise = 0
 
-            if variation >= seuil_variation:
-                HistoriquePerformance.objects.create(agent=self, performance=performance)
+            for obj in objectifs:
+                taux = float(obj.taux_avancement)
+                poids = float(obj.poids)
+                numerator += taux * poids
+                denom += poids
 
-        self.performance_moyenne = round(performance, 2)
+                # --- Calcul du taux de réalisations validées
+                realisations_valides = Realisation.objects.filter(objectif=obj, est_valide=True).count()
+                total_realise += realisations_valides
+                total_cible += getattr(obj, 'cible', 0) or 0
+
+            perf = numerator / denom if denom > 0 else 0.0
+            taux_realisations = round((total_realise / total_cible) * 100, 2) if total_cible else 0
+
+        dernier = self.historique_performances.order_by('-date_calcul').first()
+
+        if not dernier:
+            HistoriquePerformance.objects.create(
+                agent=self,
+                performance=perf,
+                taux_realisations_valides=taux_realisations
+            )
+        else:
+            var_perf = abs(perf - float(dernier.performance))
+            var_taux = abs(taux_realisations - float(dernier.taux_realisations_valides))
+            if var_perf >= seuil_variation or var_taux >= seuil_variation:
+                HistoriquePerformance.objects.create(
+                    agent=self,
+                    performance=perf,
+                    taux_realisations_valides=taux_realisations
+                )
+
+        self.performance_moyenne = round(perf, 2)
         self.save(update_fields=['performance_moyenne'])
-
         return self.performance_moyenne
 
     def ajouter_evaluation_comportementale(self, evaluation):
@@ -123,24 +138,35 @@ class Agent(AbstractBaseUser, PermissionsMixin):
 
     def taux_realisations_valides(self):
         """
-        Calcule la somme (ou moyenne) des taux d’avancement
-        de toutes les réalisations validées associées aux objectifs de l’agent.
+        Retourne le pourcentage de réalisations validées de l'agent
+        par rapport à la somme des cibles de tous ses objectifs.
         """
+        # Récupère tous les objectifs de l'agent
+        objectifs = self.objectifs_planification.all()  # lié via related_name='objectifs_planification'
+        if not objectifs.exists():
+            return 0.0
 
-        from suivi_execution.models import Realisation  # import local pour éviter la circularité
+        # Somme des cibles
+        total_cibles = sum(obj.cible for obj in objectifs if obj.cible)
 
-        objectifs = self.objectif_set.filter(statut='valide')
-        realisations = Realisation.objects.filter(objectif__in=objectifs, est_valide=True)
+        if total_cibles == 0:
+            return 0.0
 
-        if not realisations.exists():
-            return 0
+        # Somme des réalisations validées
+        total_realisations_validees = sum(
+            obj.realisations.filter(est_valide=True).count()
+            for obj in objectifs
+        )
 
-        total = sum(r.taux_avancement for r in realisations)
-        return round(total / realisations.count(), 2)
+        # Calcul du pourcentage
+        taux = (total_realisations_validees / total_cibles) * 100
+        return round(taux, 2)
 
 class HistoriquePerformance(models.Model):
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='historique_performances')
     performance = models.DecimalField(max_digits=5, decimal_places=2)
+    taux_realisations_valides = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # ✅ Ajouté ici
+
     date_calcul = models.DateTimeField(default=timezone.now)
 
     class Meta:

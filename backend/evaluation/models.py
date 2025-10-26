@@ -15,20 +15,23 @@ class AutoEvaluation(models.Model):
 
 
 class Evaluation(models.Model):
+    STATUT_CHOICES = [
+        ("à évaluer", "À évaluer"),
+        ("en cours", "En cours"),
+        ("terminée", "Terminée"),
+    ]
+
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
     responsable = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='evaluations')
     objectif = models.ForeignKey(Objectif, on_delete=models.CASCADE)
-    note = models.DecimalField(max_digits=5, decimal_places=2)  # Note d'évaluation de performance
-    commentaire = models.TextField()  # Commentaire du responsable
-    est_valide = models.BooleanField(default=False)  # Si l'évaluation a été validée
-    evaluation_comportementale = models.TextField(null=True, blank=True)  # Evaluation comportementale de l'agent
+    note = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    commentaire = models.TextField(null=True, blank=True)
+    est_valide = models.BooleanField(default=False)
+    evaluation_comportementale = models.TextField(null=True, blank=True)
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default="à évaluer")
 
     def __str__(self):
         return f"Évaluation de {self.agent} par {self.responsable}"
-
-    class Meta:
-        verbose_name = "Évaluation de performance"
-        verbose_name_plural = "Évaluations de performance"
 
 
 class NoteFinale(models.Model):

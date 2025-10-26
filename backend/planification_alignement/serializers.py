@@ -92,6 +92,14 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
         """
         return float(obj.performance_moyenne)
 
+class AgentSousResponsableSerializer(serializers.ModelSerializer):
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+
+    class Meta:
+        model = Agent
+        fields = ['id', 'matricule', 'nom', 'prenom', 'service_nom', 'performance_moyenne', 'etat_agent']
+
+
 class HistoriquePerformanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoriquePerformance

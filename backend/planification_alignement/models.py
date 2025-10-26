@@ -66,7 +66,14 @@ class Objectif(models.Model):
     #taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # nouveau champ
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE, blank=True, null=True)
-    agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)
+    #agent = models.ForeignKey('accounts.Agent', on_delete=models.SET_NULL, null=True, blank=True)
+    agent = models.ForeignKey(
+        'accounts.Agent',
+        on_delete=models.CASCADE,
+        related_name='objectifs_planification',  # ✅ Important
+        null=True, blank=True
+    )
+
     periode = models.ForeignKey(Periode, on_delete=models.CASCADE)
     statut = models.CharField(
         max_length=20,

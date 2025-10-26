@@ -28,6 +28,7 @@ const drawerWidth = 300;
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, to: '/n1-dashboard' },
+  { text: 'Agents Supervisés', icon: <DashboardIcon />, to: '/accounts/mes-agents/' },
   { text: 'Objectifs & Alignement', icon: <BarChartIcon />, to: '/objectifs' },
   { text: 'Suivi & Réalisations', icon: <AssignmentIcon />, to: '/auto-evaluation' },
   { text: 'Évaluations', icon: <PeopleIcon />, to: '/evaluation' },

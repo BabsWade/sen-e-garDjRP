@@ -71,15 +71,40 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
         read_only_fields = ['performance_moyenne']
 
     def get_responsable_nom(self, obj):
-        """
-        Retourne le nom complet du responsable hiérarchique s’il existe.
-        """
+        """Retourne le nom complet du responsable hiérarchique s’il existe."""
         if obj.responsable:
             return f"{obj.responsable.nom} {obj.responsable.prenom}"
         return "Non défini"
 
     def get_taux_realisations_valides(self, obj):
-        return obj.taux_realisations_valides()
+        """
+        Calcule le taux de réalisations validées de l'agent
+        en se basant sur les réalisations validées de ses objectifs
+        et la somme des cibles de ces objectifs.
+        """
+        objectifs = obj.objectifs_planification.all()
+        if not objectifs.exists():
+            return 0.0
+
+        total_cibles = sum(objo.cible or 0 for objo in objectifs)
+        if total_cibles == 0:
+            return 0.0
+
+        total_realisations_valides = sum(
+            objo.realisations.filter(est_valide=True).count()
+            for objo in objectifs
+        )
+
+        taux = (total_realisations_valides / total_cibles) * 100
+        return round(taux, 2)
+
+class AgentSousResponsableSerializer(serializers.ModelSerializer):
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+
+    class Meta:
+        model = Agent
+        fields = ['id', 'matricule', 'nom', 'prenom', 'service_nom', 'performance_moyenne', 'etat_agent']
+
 
 class HistoriquePerformanceSerializer(serializers.ModelSerializer):
     taux_realisations_valides = serializers.SerializerMethodField()

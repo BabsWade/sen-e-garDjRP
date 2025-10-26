@@ -3,7 +3,7 @@ from .views import (
     AgentRegisterView,
     CurrentUserView,
     ActivateAccountView,
-    SetPasswordView, AgentPerformanceView,
+    SetPasswordView, AgentPerformanceView, SubordonnesListAPIView,
 )
 from suivi_execution import views
 
@@ -16,5 +16,6 @@ urlpatterns = [
     #path('performance-agent/', AgentPerformanceView.as_view(), name='performance-agent'),
     path('performances-agent/', AgentPerformanceView.as_view(), name='performances-agent'),
     path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
+    path('mes-agents/', SubordonnesListAPIView.as_view(), name='mes-agents'),
 
 ]

@@ -5,6 +5,10 @@ from .models import Realisation, Notification
 from planification_alignement.models import Objectif
 from accounts.models import Agent
 
+from evaluation.models import Evaluation
+import logging
+
+logger = logging.getLogger(__name__)
 
 # -------------------------------
 # 🔄 Mise à jour des objectifs et performance
@@ -152,3 +156,42 @@ def notif_feedback(sender, instance, **kwargs):
             message=f"Nouveau feedback pour l’objectif '{instance.objectif.libelle}': {instance.feedback}",
             date_envoi=timezone.now()
         )
+
+@receiver(post_save, sender=Objectif)
+def creer_evaluation_lors_validation(sender, instance, created, **kwargs):
+    """
+    Crée automatiquement une évaluation quand un objectif devient 'valide'.
+    """
+    try:
+        logger.debug(f"[signal] Objectif sauvegardé id={instance.pk} statut={instance.statut}")
+    except Exception:
+        pass
+
+    # On veut agir uniquement quand le statut vaut 'valide'
+    if instance.statut != "valide":
+        return
+
+    # Protection: si pas d'agent, on ne fait rien
+    if not instance.agent:
+        logger.warning(f"Objectif {instance.pk} n'a pas d'agent ; skip creation Evaluation.")
+        return
+
+    # Eviter doublons
+    if Evaluation.objects.filter(objectif=instance).exists():
+        logger.debug(f"Evaluation déjà existante pour objectif {instance.pk}")
+        return
+
+    # Récupère le responsable depuis le bon champ
+    responsable = getattr(instance.agent, "responsable", None)
+    if not responsable:
+        logger.warning(f"Agent {instance.agent} n'a pas de responsable ; pas d'évaluation créée.")
+        return
+
+    # Crée l'évaluation
+    Evaluation.objects.create(
+        agent=instance.agent,
+        responsable=responsable,
+        objectif=instance,
+        statut="à évaluer"
+    )
+    logger.info(f"Evaluation créée pour objectif {instance.pk} (agent={instance.agent.matricule})")
