@@ -157,35 +157,62 @@ const AgentDashboard: React.FC = () => {
         {/* Graphique et Tableau des objectifs côte à côte */}
         <Grid container spacing={2} >
           <Grid size={{ xs: 12, md: 7 }}>
-            {/* Graphique */}
-            <Card sx={{
-            
-            }}>
+            <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Évolution de ma performance
+                  Évolution de ma performance et de mes réalisations
                 </Typography>
                 <Line
                   data={{
-                    labels: historique.map((h) => new Date(h.date).toLocaleDateString()),
+                    labels: historique.map((h) => new Date(h.date_calcul).toLocaleDateString()),
                     datasets: [
                       {
                         label: 'Performance (%)',
                         data: historique.map((h) => h.performance),
                         borderColor: '#1976d2',
+                        backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                        tension: 0.3,
+                        fill: false,
+                      },
+                      {
+                        label: 'Taux de réalisations validées (%)',
+                        data: historique.map((h) => h.taux_realisations_valides),
+                        borderColor: '#ff9800',
+                        backgroundColor: 'rgba(255, 152, 0, 0.2)',
                         tension: 0.3,
                         fill: false,
                       },
                     ],
                   }}
                   options={{
-                    scales: { y: { beginAtZero: true, max: 100 } },
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: 'top',
+                      },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                          display: true,
+                          text: 'Pourcentage (%)',
+                        },
+                      },
+                      x: {
+                        title: {
+                          display: true,
+                          text: 'Date',
+                        },
+                      },
+                    },
                   }}
-                
                 />
               </CardContent>
             </Card>
           </Grid>
+
 
           <Grid size={{ xs: 12, md: 5 }}>
             <Card>

@@ -159,7 +159,7 @@ const CreateObjectifPage: React.FC = () => {
                 </Grid>
 
                 {/* Type KPI & Cible */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={12}>
                   <TextField
                     label="Type KPI"
                     name="type_kpi"

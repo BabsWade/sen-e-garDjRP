@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from planification_alignement.models import Service  # Assurez-vous que le modèle Service est correctement importé
+from planification_alignement.models import Service, Objectif  # Assurez-vous que le modèle Service est correctement importé
 from django.utils import timezone
+
 
 ROLES = (
     ('AGENT', 'Agent Public'),
@@ -120,6 +121,22 @@ class Agent(AbstractBaseUser, PermissionsMixin):
         self.evaluation_comportementale = evaluation
         self.save()
 
+    def taux_realisations_valides(self):
+        """
+        Calcule la somme (ou moyenne) des taux d’avancement
+        de toutes les réalisations validées associées aux objectifs de l’agent.
+        """
+
+        from suivi_execution.models import Realisation  # import local pour éviter la circularité
+
+        objectifs = self.objectif_set.filter(statut='valide')
+        realisations = Realisation.objects.filter(objectif__in=objectifs, est_valide=True)
+
+        if not realisations.exists():
+            return 0
+
+        total = sum(r.taux_avancement for r in realisations)
+        return round(total / realisations.count(), 2)
 
 class HistoriquePerformance(models.Model):
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='historique_performances')

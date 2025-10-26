@@ -141,20 +141,36 @@ class AgentFeedbacksAPIView(APIView):
         return Response(serializer.data)
 
 # 3) Historique des performances de l'agent
+
 class AgentHistoriquePerformanceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         agent = request.user
-        historiques = HistoriquePerformance.objects.filter(agent=agent).order_by('-date_calcul')
-        # si tu n'as pas encore de serializer, retourne un JSON minimal :
-        data = [
-            {
-                "date": h.date_calcul,
+        historiques = HistoriquePerformance.objects.filter(agent=agent).order_by('date_calcul')
+
+        data = []
+        for h in historiques:
+            # Tous les objectifs actifs à la date donnée
+            objectifs = Objectif.objects.filter(agent=agent, date_debut__lte=h.date_calcul)
+
+            total_cible = 0
+            total_realise = 0
+
+            for obj in objectifs:
+                # 🔹 Récupérer les réalisations validées liées à cet objectif
+                realisations_valides = Realisation.objects.filter(objectif=obj, est_valide=True)
+                # 🔹 Compter combien ont été validées
+                total_realise += realisations_valides.count()
+                # 🔹 Ajouter la cible de l’objectif
+                total_cible += getattr(obj, 'cible', 0) or 0  # protège contre None
+
+            taux_realisations_valides = round((total_realise / total_cible) * 100, 2) if total_cible else 0
+
+            data.append({
+                "date_calcul": h.date_calcul,
                 "performance": float(h.performance),
+                "taux_realisations_valides": taux_realisations_valides
+            })
 
-
-            } for h in historiques
-        ]
         return Response(data)
-

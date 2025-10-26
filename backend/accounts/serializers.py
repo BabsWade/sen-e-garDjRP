@@ -54,6 +54,7 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
 class AgentPerformanceSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True)
     responsable_nom = serializers.SerializerMethodField()
+    taux_realisations_valides = serializers.SerializerMethodField()
 
     class Meta:
         model = Agent
@@ -65,6 +66,7 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             'performance_moyenne',
             'service_nom',
             'responsable_nom',
+            'taux_realisations_valides',
         ]
         read_only_fields = ['performance_moyenne']
 
@@ -76,7 +78,21 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             return f"{obj.responsable.nom} {obj.responsable.prenom}"
         return "Non défini"
 
+    def get_taux_realisations_valides(self, obj):
+        return obj.taux_realisations_valides()
+
 class HistoriquePerformanceSerializer(serializers.ModelSerializer):
+    taux_realisations_valides = serializers.SerializerMethodField()
+
     class Meta:
         model = HistoriquePerformance
-        fields = ['id', 'agent', 'performance', 'date_calcul']
+        fields = ['id', 'agent', 'performance', 'date_calcul', 'taux_realisations_valides']
+
+    def get_taux_realisations_valides(self, obj):
+        """Calcule le taux de réalisations validées à la date de l’enregistrement."""
+        agent = obj.agent
+        from planification_alignement.models import Objectif
+        objectifs = Objectif.objects.filter(agent=agent, date_creation__lte=obj.date_calcul)
+        total = objectifs.count()
+        valides = objectifs.filter(taux_avancement__gte=100).count()
+        return round(valides / total * 100, 2) if total else 0

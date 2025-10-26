@@ -8,6 +8,7 @@ class AutoEvaluation(models.Model):
     objectif = models.ForeignKey(Objectif, on_delete=models.CASCADE)
     commentaire = models.TextField()  # Commentaire sur l'objectif ou la compétence
     note = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)  # Note de l'auto-évaluation
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return f"Auto-évaluation de {self.agent} pour {self.objectif}"

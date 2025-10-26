@@ -36,6 +36,7 @@ interface AutoEvalData {
 const AutoEvaluationPage: React.FC = () => {
   const [objectifs, setObjectifs] = useState<Objectif[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoEvaluations, setAutoEvaluations] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<AutoEvalData>({
     objectif: '',
@@ -65,6 +66,19 @@ const AutoEvaluationPage: React.FC = () => {
     fetchObjectifs();
   }, []);
 
+// Charger les anciennes autoévaluations
+useEffect(() => {
+    const fetchAutoEvaluations = async () => {
+      try {
+        const res = await api.get('/autoevaluations/');
+        setAutoEvaluations(res.data);
+      } catch (err) {
+        console.error('❌ Erreur lors du chargement de l’historique :', err);
+      }
+    };
+    fetchAutoEvaluations();
+  }, []);
+  
   // --- Gestion du changement de champ ---
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -216,6 +230,40 @@ const AutoEvaluationPage: React.FC = () => {
                 </Grid>
               </Grid>
             </form>
+            <Box sx={{ mt: 6 }}>
+  <Typography variant="h6" gutterBottom>
+    📊 Historique de mes auto-évaluations
+  </Typography>
+
+  {autoEvaluations.length === 0 ? (
+    <Typography>Aucune auto-évaluation enregistrée pour le moment.</Typography>
+  ) : (
+    <Grid container spacing={2}>
+      {autoEvaluations.map((evalItem: any) => (
+        <Grid item xs={12} md={6} key={evalItem.id}>
+          <Paper sx={{ p: 2, bgcolor: '#f9fafb' }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              🎯 {evalItem.objectif_libelle || evalItem.objectif_libelle || 'Objectif inconnu'}
+            </Typography>
+            <Typography>Note : {evalItem.note}%</Typography>
+            {evalItem.commentaire && (
+              <Typography variant="body2" color="text.secondary">
+                {evalItem.commentaire}
+              </Typography>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              Soumis le{' '}
+              {evalItem.date_creation
+                ? new Date(evalItem.date_creation).toLocaleDateString()
+                : '—'}
+            </Typography>
+          </Paper>
+        </Grid>
+      ))}
+    </Grid>
+  )}
+</Box>
+
           </Paper>
         </Box>
       </Box>

@@ -38,13 +38,14 @@ class AutoEvaluationReadSerializer(serializers.ModelSerializer):
     objectif_libelle = serializers.CharField(source='objectif.libelle', read_only=True)
     objectif_type = serializers.CharField(source='objectif.type_kpi', read_only=True)
     objectif_cible = serializers.CharField(source='objectif.cible', read_only=True)
+    date_creation = serializers.DateTimeField(source='created_at', read_only=True)
 
     class Meta:
         model = AutoEvaluation
         fields = [
             'id', 'objectif', 'objectif_libelle',
             'objectif_type', 'objectif_cible',
-            'note', 'commentaire'
+            'note', 'commentaire','date_creation'
         ]
 
 class EvaluationSerializer(serializers.ModelSerializer):

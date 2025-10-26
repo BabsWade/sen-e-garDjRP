@@ -1,6 +1,17 @@
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
+
+  components: {
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          minWidth: 250, // largeur minimale pour tous les TextField
+        },
+      },
+    },
+  },
+  
   palette: {
     mode: 'light',
     primary: {
@@ -30,6 +41,7 @@ const theme = createTheme({
     body1: { fontSize: '0.95rem' },
   },
   shape: {
+    
     borderRadius: 12,
   },
   components: {

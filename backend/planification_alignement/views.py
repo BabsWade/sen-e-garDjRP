@@ -16,6 +16,9 @@ from .serializers import AgentPerformanceSerializer
 from planification_alignement.models import Objectif, Periode
 from evaluation.models import NoteFinale
 
+from accounts.models import HistoriquePerformance
+
+
 # Permissions personnalisées
 class IsDRH(BasePermission):
     def has_permission(self, request, view):
@@ -139,10 +142,35 @@ class PerformanceAPIView(APIView):
 
     def get(self, request):
         agent = request.user
+
+        # 1️⃣ Calcul de la performance pondérée globale
         agent.calculer_performance_ponderee()
         serializer = AgentPerformanceSerializer(agent)
-        return Response(serializer.data)
 
+        # 2️⃣ Historique avec taux de réalisations validées
+        historique = []
+
+        # On prend toutes les périodes ou toutes les dates historiques que tu veux
+        performances = HistoriquePerformance.objects.filter(agent=agent).order_by('date_calcul')
+
+        for h in performances:
+            # Objectifs jusqu'à cette date
+            objectifs = Objectif.objects.filter(agent=agent, date_creation__lte=h.date_calcul)
+            total_objectifs = objectifs.count()
+            objectifs_valides = objectifs.filter(taux_avancement__gte=100).count()
+
+            taux_realisations_valides = (objectifs_valides / total_objectifs * 100) if total_objectifs else 0
+
+            historique.append({
+                "date": h.date_calcul,
+                "performance": h.performance,
+                "taux_realisations_valides": taux_realisations_valides
+            })
+
+        return Response({
+            **serializer.data,
+            "historique": historique
+        })
 class AgentDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 

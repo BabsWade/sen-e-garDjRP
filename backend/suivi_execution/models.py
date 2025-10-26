@@ -36,7 +36,7 @@ class Realisation(models.Model):
 
 
 class Notification(models.Model):
-    agent = models.ForeignKey('accounts.Agent', on_delete=models.CASCADE)
+    agent = models.ForeignKey('accounts.Agent', on_delete=models.CASCADE, blank=True, null=True)
     message = models.TextField()
     date_envoi = models.DateTimeField(auto_now_add=True)
     statut = models.CharField(max_length=20, choices=[('Envoyé', 'Envoyé'), ('Lu', 'Lu')], default='Envoyé')
