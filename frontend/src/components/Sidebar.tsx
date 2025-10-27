@@ -36,6 +36,8 @@ const menuItems = [
   { text: 'Mon Profil', icon: <PeopleIcon />, to: '/profil' },
   { text: 'Notifications', icon: <SettingsIcon />, to: '/notifications' },
   { text: 'Aide / Support', icon: <SettingsIcon />, to: '/aide-support' },
+  
+
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, handleDrawerToggle }) => {

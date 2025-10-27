@@ -22,6 +22,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { useNavigate } from 'react-router-dom';
 import SidebarNplus1 from '../components/SidebarNplus1';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 interface Agent {
     id: number;
@@ -58,7 +59,9 @@ const AgentsSupervises: React.FC = () => {
         };
         fetchData();
     }, []);
-
+    const handleViewDetails = (id: number) => {
+        navigate(`/agents/${id}`);
+      };
     const handleVoirProfil = (id: number) => {
         navigate(`/agent/${id}`); // Page profil d’un agent (à créer si besoin)
     };
@@ -119,6 +122,7 @@ const AgentsSupervises: React.FC = () => {
                             <Typography>Aucun agent supervisé trouvé.</Typography>
                         ) : (
                             <Table>
+                                
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>Agent</TableCell>
@@ -162,9 +166,15 @@ const AgentsSupervises: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Button
-                                                    variant="outlined"
-                                                    size="small"
-                                                    onClick={() => handleVoirProfil(a.id)}
+                                                    variant="contained"
+                                                    startIcon={<VisibilityIcon />}
+                                                    sx={{
+                                                      bgcolor: '#1976d2',
+                                                      '&:hover': { bgcolor: '#115293' },
+                                                      borderRadius: 2,
+                                                      px: 3,
+                                                    }}
+                                                    onClick={() => handleViewDetails(a.id)}
                                                 >
                                                     Voir détails
                                                 </Button>

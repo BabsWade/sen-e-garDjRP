@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import PeriodeViewSet, ServiceViewSet, ObjectifViewSet, PerformanceAPIView, IndicateurViewSet, \
     AgentDashboardView, PlanStrategiqueViewSet, ObjectifProgrammeViewSet
 from suivi_execution import views
+from .views import AgentsSousResponsableViewSet
 
 router = DefaultRouter()
 router.register(r'periodes', PeriodeViewSet)
@@ -12,6 +13,8 @@ router.register(r'indicateurs', IndicateurViewSet)
 router.register(r'agent-objectifs', ObjectifViewSet, basename='agent-objectifs')
 router.register('planstrategique', PlanStrategiqueViewSet, basename='planstrategique')
 router.register('objectifprogramme', ObjectifProgrammeViewSet, basename='objectifprogramme')
+router.register(r'agents-sous-responsable', AgentsSousResponsableViewSet, basename='agents-sous-responsable')
+
 urlpatterns = [
     path('', include(router.urls)),
     path('performance-agent/', PerformanceAPIView.as_view(), name='performance'),

@@ -27,6 +27,8 @@ import Dashboard from './components/Dashboard';
 import ObjectifDetails from './pages/ObjectifDetails';
 import Sidebar from './components/Sidebar';
 import AgentsSupervises from './pages/AgentsSupervises';
+import AgentDetailsPage from './pages/AgentDetailsPage';
+import AgentsSupervisesPage from './pages/AgentsSupervisesPage';
 
 const App: React.FC = () => {
   return (
@@ -50,6 +52,15 @@ const App: React.FC = () => {
           path="/accounts/mes-agents"
           element={<PrivateRoute element={<AgentsSupervises />} roles={['RESPONSABLE_N1']} />}
         />
+        <Route 
+        path="/agents/:id" 
+        element={<PrivateRoute element={<AgentDetailsPage />} roles={['RESPONSABLE_N1']} />}
+        />
+        <Route 
+        path="/agents-sous-responsable" 
+        element={<PrivateRoute element={<AgentsSupervisesPage />} roles={['RESPONSABLE_N1']} />}
+        />
+
         <Route
           path="/drh-dashboard"
           element={<PrivateRoute element={<DRHDashboard />} roles={['DRH']} />}

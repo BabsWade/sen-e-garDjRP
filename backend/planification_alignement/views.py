@@ -11,12 +11,21 @@ from .serializers import (
     ObjectifSerializer,
     IndicateurSerializer, PlanStrategiqueSerializer, ObjectifProgrammeSerializer
 )
+from .models import Objectif
+from accounts.models import Agent
+
+from .serializers import ObjectifSerializer
+
 from .permissions import ObjectifAccessPermission
 from .serializers import AgentPerformanceSerializer
 from planification_alignement.models import Objectif, Periode
 from evaluation.models import NoteFinale
 
 from accounts.models import HistoriquePerformance
+from rest_framework.exceptions import PermissionDenied
+
+from suivi_execution.models import Realisation
+from suivi_execution.serializers import RealisationSerializer
 
 
 # Permissions personnalisées
@@ -209,3 +218,70 @@ class AgentDashboardView(APIView):
             "periode_en_cours": periode_nom,
 
         })
+
+class AgentsSousResponsableViewSet(viewsets.ViewSet):
+    """
+    Vue permettant au responsable N+1 de gérer ses agents :
+    - Voir le profil complet
+    - Voir / Modifier / Supprimer leurs objectifs et réalisations
+    - Leur assigner de nouveaux objectifs
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self, request):
+        responsable = request.user  # ✅ déjà un Agent
+        return Agent.objects.filter(responsable=responsable)
+
+    def list(self, request):
+        agents = self.get_queryset(request)
+        data = AgentPerformanceSerializer(agents, many=True).data
+        return Response(data)
+
+    def retrieve(self, request, pk=None):
+        # Profil complet d’un agent + ses objectifs et réalisations
+        agent = self.get_queryset(request).filter(pk=pk).first()
+        if not agent:
+            raise PermissionDenied("Cet agent ne vous est pas rattaché.")
+
+        objectifs = Objectif.objects.filter(agent=agent)
+        realisations = Realisation.objects.filter(objectif__agent=agent)
+
+        return Response({
+            "agent": AgentPerformanceSerializer(agent).data,
+            "objectifs": ObjectifSerializer(objectifs, many=True).data,
+            "realisations": RealisationSerializer(realisations, many=True).data
+        })
+
+    @action(detail=True, methods=['post'])
+    def assigner_objectif(self, request, pk=None):
+        # Crée un nouvel objectif pour un agent sous responsabilité
+        agent = self.get_queryset(request).filter(pk=pk).first()
+        if not agent:
+            raise PermissionDenied("Cet agent ne vous est pas rattaché.")
+        data = request.data.copy()
+        data["agent"] = agent.id
+        serializer = ObjectifSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(agent=agent)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['put'], url_path="objectifs/(?P<obj_id>[^/.]+)")
+    def modifier_objectif(self, request, pk=None, obj_id=None):
+        # Modifier un objectif d’un agent
+        agent = self.get_queryset(request).filter(pk=pk).first()
+        objectif = Objectif.objects.filter(pk=obj_id, agent=agent).first()
+        if not objectif:
+            raise PermissionDenied("Objectif non autorisé.")
+        serializer = ObjectifSerializer(objectif, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['delete'], url_path="objectifs/(?P<obj_id>[^/.]+)")
+    def supprimer_objectif(self, request, pk=None, obj_id=None):
+        agent = self.get_queryset(request).filter(pk=pk).first()
+        objectif = Objectif.objects.filter(pk=obj_id, agent=agent).first()
+        if not objectif:
+            raise PermissionDenied("Suppression non autorisée.")
+        objectif.delete()
+        return Response({"detail": "Objectif supprimé avec succès."}, status=status.HTTP_204_NO_CONTENT)
