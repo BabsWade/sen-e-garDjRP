@@ -24,8 +24,6 @@ class ObjectifAccessPermission(permissions.BasePermission):
             return obj.agent == user  # Peut voir/modifier seulement ses objectifs
 
         if user.role == 'RESPONSABLE_N1':
-            # Vérifie si l’agent est sous sa supervision
-            #return obj.agent.responsable_matricule == user.matricule
-            return Objectif.objects.filter(agent__responsable=user)
+            return obj.agent.responsable == user  # retourne True si l'agent est sous sa responsabilité
 
         return False

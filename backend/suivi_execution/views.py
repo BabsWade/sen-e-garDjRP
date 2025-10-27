@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -130,3 +130,23 @@ def agent_notifications(request):
     notifications = Notification.objects.filter(agent=agent).order_by('-created_at')
     serializer = NotificationSerializer(notifications, many=True)
     return Response(serializer.data)
+
+class RealisationCreateAPIView(generics.CreateAPIView):
+    """
+    POST /api/realisations/ → créer une réalisation
+    """
+    serializer_class = RealisationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(agent=self.request.user)
+
+
+class RealisationUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    PUT /api/realisations/<id>/ → modifier
+    DELETE /api/realisations/<id>/ → supprimer
+    """
+    queryset = Realisation.objects.all()
+    serializer_class = RealisationSerializer
+    permission_classes = [permissions.IsAuthenticated]

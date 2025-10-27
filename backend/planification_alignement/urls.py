@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import PeriodeViewSet, ServiceViewSet, ObjectifViewSet, PerformanceAPIView, IndicateurViewSet, \
-    AgentDashboardView, PlanStrategiqueViewSet, ObjectifProgrammeViewSet
+    AgentDashboardView, PlanStrategiqueViewSet, ObjectifProgrammeViewSet, ObjectifDetailAPIView, \
+    ObjectifRealisationsAPIView
 from suivi_execution import views
 from .views import AgentsSousResponsableViewSet
 
@@ -21,5 +22,7 @@ urlpatterns = [
     # path('performance-agent/', PerformanceAgentAPIView.as_view(), name='performance-agent')
     path('dashboard-agent/', AgentDashboardView.as_view(), name='dashboard-agent'),
     path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
+    path('objectifs/<int:pk>/', ObjectifDetailAPIView.as_view(), name='objectif-detail'),
+    path('objectifs/<int:pk>/realisations/', ObjectifRealisationsAPIView.as_view(), name='objectif-realisations'),
 
 ]

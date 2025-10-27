@@ -1,3 +1,4 @@
+// src/pages/AgentDetailsPage.tsx
 import React, { useEffect, useState, FormEvent } from 'react';
 import {
   Box,
@@ -17,11 +18,10 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Sidebar from '../components/Sidebar';
-import Topbar from '../components/Topbar';
-import api from '../api';
 import { useParams, useNavigate } from 'react-router-dom';
 import SidebarNplus1 from '../components/SidebarNplus1';
+import Topbar from '../components/Topbar';
+import api from '../api';
 
 const drawerWidth = 300;
 
@@ -58,6 +58,8 @@ const AgentDetailsPage: React.FC = () => {
   const [realisations, setRealisations] = useState<Realisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingObjectif, setEditingObjectif] = useState<Objectif | null>(null);
 
   const [form, setForm] = useState({
     libelle: '',
@@ -104,8 +106,45 @@ const AgentDetailsPage: React.FC = () => {
       const resp = await api.post(`/agents-sous-responsable/${id}/assigner_objectif/`, payload);
       setObjectifs((prev) => [...prev, resp.data]);
       setOpenDialog(false);
+      setForm({ libelle: '', type_kpi: 'Quantitatif', cible: '', poids: '' });
     } catch (error) {
       console.error('Erreur ajout objectif', error);
+    }
+  };
+
+  const handleEditClick = (obj: Objectif) => {
+    setEditingObjectif(obj);
+    setForm({
+      libelle: obj.libelle,
+      type_kpi: obj.type_kpi,
+      cible: obj.cible.toString(),
+      poids: obj.poids.toString()
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateObjectif = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingObjectif) return;
+    try {
+      const payload = {
+        libelle: form.libelle,
+        type_kpi: form.type_kpi,
+        cible: parseFloat(form.cible),
+        poids: parseFloat(form.poids)
+      };
+      const resp = await api.put(
+        `/agents-sous-responsable/${id}/objectifs/${editingObjectif.id}/`,
+        payload
+      );
+      setObjectifs((prev) =>
+        prev.map((o) => (o.id === editingObjectif.id ? resp.data : o))
+      );
+      setEditDialogOpen(false);
+      setEditingObjectif(null);
+      setForm({ libelle: '', type_kpi: 'Quantitatif', cible: '', poids: '' });
+    } catch (error) {
+      console.error('Erreur mise à jour objectif', error);
     }
   };
 
@@ -123,7 +162,7 @@ const AgentDetailsPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
-      <SidebarNplus1 mobileOpen={false} handleDrawerToggle={() => { }} />
+      <SidebarNplus1 mobileOpen={false} handleDrawerToggle={() => {}} />
       <Box
         component="main"
         sx={{
@@ -133,11 +172,11 @@ const AgentDetailsPage: React.FC = () => {
           flexDirection: 'column',
         }}
       >
-        <Topbar title={`Profil de ${agent.prenom} ${agent.nom}`} handleDrawerToggle={() => { }} />
+        <Topbar title={`Profil de ${agent.prenom} ${agent.nom}`} handleDrawerToggle={() => {}} />
 
         <Box sx={{ mt: { xs: '120px', md: '80px' }, p: { xs: 2, md: 4 } }}>
           <Paper elevation={3} sx={{ p: 4, borderRadius: 3, maxWidth: 1100, mx: 'auto' }}>
-            {/* --- Profil Agent --- */}
+            {/* Profil Agent */}
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
               👤 Profil de l’agent
             </Typography>
@@ -147,7 +186,7 @@ const AgentDetailsPage: React.FC = () => {
               <Grid item xs={6}><b>Service :</b> {agent.service}</Grid>
             </Grid>
 
-            {/* --- Objectifs --- */}
+            {/* Objectifs */}
             <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>🎯 Objectifs</Typography>
             <Button
               startIcon={<AddIcon />}
@@ -172,14 +211,21 @@ const AgentDetailsPage: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: '#e3f2fd' },
                   }}
+                  onClick={() => navigate(`/objectifdetailsnplus1/${obj.id}`)}
                 >
                   <Box>
                     <Typography sx={{ fontWeight: 'bold' }}>{obj.libelle}</Typography>
-                    <Typography variant="body2">Type : {obj.type_kpi} | Cible : {obj.cible} | Poids : {obj.poids}</Typography>
+                    <Typography variant="body2">
+                      Type : {obj.type_kpi} | Cible : {obj.cible} | Poids : {obj.poids}
+                    </Typography>
                   </Box>
-                  <Box>
-                    <IconButton color="primary"><EditIcon /></IconButton>
+                  <Box onClick={(e) => e.stopPropagation()}>
+                    <IconButton color="primary" onClick={() => handleEditClick(obj)}>
+                      <EditIcon />
+                    </IconButton>
                     <IconButton color="error" onClick={() => handleDeleteObjectif(obj.id)}>
                       <DeleteIcon />
                     </IconButton>
@@ -188,7 +234,7 @@ const AgentDetailsPage: React.FC = () => {
               ))
             )}
 
-            {/* --- Réalisations --- */}
+            {/* Réalisations */}
             <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>📈 Réalisations</Typography>
             {realisations.length === 0 ? (
               <Typography>Aucune réalisation enregistrée.</Typography>
@@ -204,7 +250,7 @@ const AgentDetailsPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* --- DIALOG AJOUT OBJECTIF --- */}
+      {/* Dialog ajout objectif */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Assigner un nouvel objectif</DialogTitle>
         <DialogContent>

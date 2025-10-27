@@ -7,7 +7,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.models import BaseUserManager
-
+from rest_framework import serializers
+from .models import Agent
+from planification_alignement.serializers import ObjectifSerializer
+from suivi_execution.serializers import RealisationSerializer
 class AgentRegisterSerializer(serializers.ModelSerializer):
     email2 = serializers.EmailField(write_only=True, required=True, label="Confirmer l'email")
 
@@ -121,3 +124,45 @@ class HistoriquePerformanceSerializer(serializers.ModelSerializer):
         total = objectifs.count()
         valides = objectifs.filter(taux_avancement__gte=100).count()
         return round(valides / total * 100, 2) if total else 0
+
+class AgentDetailSerializer(serializers.ModelSerializer):
+    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+    responsable_nom = serializers.SerializerMethodField()
+    taux_realisations_valides = serializers.SerializerMethodField()
+    objectifs = serializers.SerializerMethodField()
+    realisations = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Agent
+        fields = [
+            'id',
+            'matricule',
+            'nom',
+            'prenom',
+            'email',
+            'role',
+            'date_embauche',
+            'etat_agent',
+            'service_nom',
+            'responsable_nom',
+            'performance_moyenne',
+            'taux_realisations_valides',
+            'objectifs',
+            'realisations'
+        ]
+
+    def get_responsable_nom(self, obj):
+        if obj.responsable:
+            return f"{obj.responsable.nom} {obj.responsable.prenom}"
+        return "Non défini"
+
+    def get_taux_realisations_valides(self, obj):
+        return obj.taux_realisations_valides()
+
+    def get_objectifs(self, obj):
+        return ObjectifSerializer(obj.objectifs_planification.all(), many=True).data
+
+    def get_realisations(self, obj):
+        from suivi_execution.models import Realisation
+        realisations = Realisation.objects.filter(objectif__in=obj.objectifs_planification.all())
+        return RealisationSerializer(realisations, many=True).data

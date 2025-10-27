@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -285,3 +285,29 @@ class AgentsSousResponsableViewSet(viewsets.ViewSet):
             raise PermissionDenied("Suppression non autorisée.")
         objectif.delete()
         return Response({"detail": "Objectif supprimé avec succès."}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ObjectifDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET    /api/objectifs/<id>/        → détail objectif
+    PUT    /api/objectifs/<id>/        → modifier
+    DELETE /api/objectifs/<id>/        → supprimer
+    """
+    queryset = Objectif.objects.all()
+    serializer_class = ObjectifSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_update(self, serializer):
+        serializer.save()  # tu peux ajouter une logique ici si besoin
+
+
+class ObjectifRealisationsAPIView(generics.ListAPIView):
+    """
+    GET /api/objectifs/<id>/realisations/ → liste des réalisations liées
+    """
+    serializer_class = RealisationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        objectif_id = self.kwargs["pk"]
+        return Realisation.objects.filter(objectif_id=objectif_id)

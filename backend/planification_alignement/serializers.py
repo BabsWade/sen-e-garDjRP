@@ -38,6 +38,21 @@ class ObjectifProgrammeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ObjectifSerializer(serializers.ModelSerializer):
+    objectif_programme = ObjectifProgrammeSerializer(read_only=True)
+    objectif_programme_id = serializers.PrimaryKeyRelatedField(
+        source='objectif_programme',
+        queryset=ObjectifProgramme.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    plan_strategique = PlanStrategiqueSerializer(read_only=True)
+    plan_strategique_id = serializers.PrimaryKeyRelatedField(
+        source='plan_strategique',
+        queryset=PlanStrategique.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True)
     indicateur = IndicateurSerializer(read_only=True)
     indicateur_id = serializers.PrimaryKeyRelatedField(
         source='indicateur',
