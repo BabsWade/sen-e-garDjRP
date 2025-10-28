@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer
+from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer, AgentDetailSerializer
 from .models import Agent
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .token_serializers import MyTokenObtainPairSerializer
@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Prefetch
 
 from planification_alignement.models import Objectif
 from planification_alignement.serializers import ObjectifSerializer
@@ -197,8 +198,8 @@ class SubordonnesListAPIView(APIView):
     def get(self, request):
         user = request.user
 
-        # Vérification du rôle
-        if user.role != 'RESPONSABLE_N1':
+        # ✅ Vérification du rôle ou du statut de supérieur hiérarchique
+        if user.role != 'RESPONSABLE_N1' and not user.superieur_hierarchique:
             return Response(
                 {"detail": "Accès non autorisé. Réservé aux responsables hiérarchiques."},
                 status=status.HTTP_403_FORBIDDEN
@@ -209,4 +210,27 @@ class SubordonnesListAPIView(APIView):
 
         serializer = AgentPerformanceSerializer(subordonnes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AgentDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, agent_id):
+        objectifs_prefetch = Prefetch(
+            'objectifs_planification',
+            queryset=Objectif.objects.all().select_related('service', 'periode'),
+            to_attr='prefetched_objectifs'
+        )
+
+        agent = get_object_or_404(
+            Agent.objects.select_related('service', 'responsable')
+                         .prefetch_related(objectifs_prefetch),
+            pk=agent_id
+        )
+
+        # Précharger les réalisations
+        realisations_qs = Realisation.objects.filter(objectif__agent=agent).select_related('objectif', 'objectif__service')
+        agent.prefetched_realisations = list(realisations_qs)
+
+        serializer = AgentDetailSerializer(agent, context={'request': request})
+        return Response(serializer.data)
 

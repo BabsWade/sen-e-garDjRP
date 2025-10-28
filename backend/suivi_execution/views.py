@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets, status, generics, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,83 +14,48 @@ class RealisationViewSet(viewsets.ModelViewSet):
     serializer_class = RealisationSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(agent=self.request.user)
-
     def get_queryset(self):
         user = self.request.user
 
-        # Base queryset
-        base_queryset = (
+        queryset = (
             Realisation.objects
             .select_related('agent', 'objectif', 'objectif__agent', 'objectif__service', 'objectif__periode')
             .prefetch_related()
         )
 
-        # 🔹 Appliquer le filtre selon le rôle de l'utilisateur
-        if user.role == 'AGENT':
-            base_queryset = base_queryset.filter(agent=user)
-        elif user.role == 'RESPONSABLE_N1':
-            base_queryset = base_queryset.filter(objectif__agent__superieur=user)
-        else:
-            return Realisation.objects.none()
-
-        # 🔹 Nouveau : filtrer par objectif s'il est passé en paramètre
+        # 🟢 Filtrer par objectif si un paramètre est passé dans l’URL
         objectif_id = self.request.query_params.get('objectif')
         if objectif_id:
-            base_queryset = base_queryset.filter(objectif_id=objectif_id)
+            queryset = queryset.filter(objectif_id=objectif_id)
 
-        return base_queryset
+        # 🔹 DRH : accès complet
+        if user.role == 'DRH':
+            return queryset
 
-    @action(detail=True, methods=['post'], url_path='valider')
-    def valider(self, request, pk=None):
-        realisation = self.get_object()
-        user = request.user
+        # 🔹 Responsable N+1 : réas de ses subordonnés + les siennes
+        if user.role == 'RESPONSABLE_N1':
+            return queryset.filter(
+                Q(agent=user) |
+                Q(objectif__agent=user) |
+                Q(objectif__agent__responsable=user)
+            ).distinct()
 
-        if realisation.objectif.agent.superieur != user:
-            return Response({'detail': "Non autorisé."}, status=403)
+        # 🔹 Agent supérieur hiérarchique : réas de ses subordonnés + les siennes
+        if user.role == 'AGENT' and getattr(user, 'superieur_hierarchique', False):
+            return queryset.filter(
+                Q(agent=user) |
+                Q(objectif__agent=user) |
+                Q(objectif__agent__responsable=user)
+            ).distinct()
 
-        realisation.est_valide = True
-        realisation.est_rejete = False
-        realisation.commentaire_rejet = None
-        realisation.date_validation = timezone.now()
-        realisation.save()
-        return Response({'status': 'Réalisation validée'})
+        # 🔹 Agent simple
+        if user.role == 'AGENT':
+            return queryset.filter(
+                Q(agent=user) | Q(objectif__agent=user)
+            ).distinct()
 
-    @action(detail=True, methods=['post'], url_path='feedback')
-    def donner_feedback(self, request, pk=None):
-        realisation = self.get_object()
-        user = request.user
-
-        if realisation.objectif.agent.superieur != user:
-            return Response({'detail': "Non autorisé."}, status=403)
-
-        feedback = request.data.get('feedback')
-        if not feedback:
-            return Response({'detail': 'Feedback requis.'}, status=400)
-
-        realisation.feedback = feedback
-        realisation.save()
-        return Response({'status': 'Feedback enregistré'})
-
-    @action(detail=True, methods=['post'], url_path='rejeter')
-    def rejeter(self, request, pk=None):
-        realisation = self.get_object()
-        user = request.user
-
-        if realisation.objectif.agent.superieur != user:
-            return Response({'detail': "Non autorisé."}, status=403)
-
-        commentaire = request.data.get('commentaire')
-        if not commentaire:
-            return Response({'detail': 'Un commentaire est requis.'}, status=400)
-
-        realisation.est_valide = False
-        realisation.est_rejete = True
-        realisation.commentaire_rejet = commentaire
-        realisation.save()
-        return Response({'status': 'Réalisation rejetée'})
-
+        return Realisation.objects.none()
+    
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]

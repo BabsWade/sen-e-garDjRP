@@ -221,7 +221,8 @@ class AgentDashboardView(APIView):
 
 class AgentsSousResponsableViewSet(viewsets.ViewSet):
     """
-    Vue permettant au responsable N+1 de gérer ses agents :
+    Vue permettant aux responsables hiérarchiques (RESPONSABLE_N1 ou agents supérieurs hiérarchiques)
+    de gérer leurs agents :
     - Voir le profil complet
     - Voir / Modifier / Supprimer leurs objectifs et réalisations
     - Leur assigner de nouveaux objectifs
@@ -229,7 +230,12 @@ class AgentsSousResponsableViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self, request):
-        responsable = request.user  # ✅ déjà un Agent
+        responsable = request.user
+
+        # ✅ Si ce n’est ni un RESPONSABLE_N1 ni un supérieur hiérarchique → accès interdit
+        if responsable.role != 'RESPONSABLE_N1' and not responsable.superieur_hierarchique:
+            raise PermissionDenied("Accès non autorisé. Réservé aux responsables hiérarchiques.")
+
         return Agent.objects.filter(responsable=responsable)
 
     def list(self, request):
@@ -238,7 +244,6 @@ class AgentsSousResponsableViewSet(viewsets.ViewSet):
         return Response(data)
 
     def retrieve(self, request, pk=None):
-        # Profil complet d’un agent + ses objectifs et réalisations
         agent = self.get_queryset(request).filter(pk=pk).first()
         if not agent:
             raise PermissionDenied("Cet agent ne vous est pas rattaché.")
@@ -254,10 +259,10 @@ class AgentsSousResponsableViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def assigner_objectif(self, request, pk=None):
-        # Crée un nouvel objectif pour un agent sous responsabilité
         agent = self.get_queryset(request).filter(pk=pk).first()
         if not agent:
             raise PermissionDenied("Cet agent ne vous est pas rattaché.")
+
         data = request.data.copy()
         data["agent"] = agent.id
         serializer = ObjectifSerializer(data=data)
@@ -267,7 +272,6 @@ class AgentsSousResponsableViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['put'], url_path="objectifs/(?P<obj_id>[^/.]+)")
     def modifier_objectif(self, request, pk=None, obj_id=None):
-        # Modifier un objectif d’un agent
         agent = self.get_queryset(request).filter(pk=pk).first()
         objectif = Objectif.objects.filter(pk=obj_id, agent=agent).first()
         if not objectif:
@@ -295,19 +299,42 @@ class ObjectifDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Objectif.objects.all()
     serializer_class = ObjectifSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ObjectifAccessPermission]
+
+
+
 
     def perform_update(self, serializer):
         serializer.save()  # tu peux ajouter une logique ici si besoin
 
 
 class ObjectifRealisationsAPIView(generics.ListAPIView):
-    """
-    GET /api/objectifs/<id>/realisations/ → liste des réalisations liées
-    """
     serializer_class = RealisationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         objectif_id = self.kwargs["pk"]
-        return Realisation.objects.filter(objectif_id=objectif_id)
+        from planification_alignement.models import Objectif
+        objectif = Objectif.objects.filter(id=objectif_id).first()
+
+        if not objectif:
+            return Realisation.objects.none()
+
+        # 🟢 DRH → accès complet
+        if user.role == "DRH":
+            return Realisation.objects.filter(objectif=objectif)
+
+        # 🟢 RESPONSABLE_N1 → accès aux réalisations de ses subordonnés
+        if user.role == "RESPONSABLE_N1" and objectif.agent.responsable == user:
+            return Realisation.objects.filter(objectif=objectif)
+
+        # 🟢 AGENT (y compris ceux ayant superieur_hierarchique = True)
+        if user.role == "AGENT":
+            # ✅ accès à ses propres objectifs
+            if objectif.agent == user:
+                return Realisation.objects.filter(objectif=objectif)
+
+        # 🚫 Sinon : aucun accès
+        return Realisation.objects.none()
+

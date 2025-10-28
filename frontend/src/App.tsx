@@ -30,6 +30,8 @@ import AgentsSupervises from './pages/AgentsSupervises';
 import AgentDetailsPage from './pages/AgentDetailsPage';
 import AgentsSupervisesPage from './pages/AgentsSupervisesPage';
 import ObjectifDetailsNplus1 from './pages/ObjectifDetailsNplus1';
+import Nplus1ObjectifList from './pages/Nplus1ObjectifList';
+import ObjectifsListNplus1 from './pages/ObjectifsListNplus1';
 
 const App: React.FC = () => {
   return (
@@ -61,6 +63,14 @@ const App: React.FC = () => {
           path="/agents-sous-responsable"
           element={<PrivateRoute element={<AgentsSupervisesPage />} roles={['RESPONSABLE_N1']} />}
         />
+         <Route
+          path="/objectiflistnplus1"
+          element={<PrivateRoute element={<Nplus1ObjectifList />} roles={['RESPONSABLE_N1']} />}
+        />
+            <Route
+          path="/objectifslistnplus1"
+          element={<PrivateRoute element={<ObjectifsListNplus1 />} roles={['RESPONSABLE_N1']} />}
+        />
 
         <Route
           path="/objectifdetailsnplus1/:id"
@@ -80,7 +90,7 @@ const App: React.FC = () => {
         {/* Pour l’Agent, les pages avec Navbar */}
         <Route
           path="/objectifs"
-          element={<PrivateRoute element={<><Navbar /><ObjectifsPage /></>} roles={['ADMIN', 'AGENT', 'DRH']} />}
+          element={<PrivateRoute element={<><Navbar /><ObjectifsPage /></>} roles={['ADMIN', 'AGENT', 'DRH', 'RESPONSABLE_N1']} />}
         />
         <Route
           path="/creer-objectifs"
@@ -93,7 +103,7 @@ const App: React.FC = () => {
 
         <Route
           path="/objectifs/create"
-          element={<PrivateRoute element={<><Navbar /><CreateObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN']} />}
+          element={<PrivateRoute element={<><Navbar /><CreateObjectifPage /></>} roles={['AGENT', 'DRH', 'ADMIN', 'RESPONSABLE_N1']} />}
         />
         <Route
           path="/objectifs/:id/edit"
@@ -103,7 +113,7 @@ const App: React.FC = () => {
         {/* Routes Suivi & Exécution (réalisations) */}
         <Route
           path="/realisations"
-          element={<PrivateRoute element={<><Navbar /><RealisationsPage /></>} roles={['AGENT']} />}
+          element={<PrivateRoute element={<><Navbar /><RealisationsPage /></>} roles={['AGENT', 'RESPONSABLE_N1']} />}
         />
         <Route
           path="/realisations/create"

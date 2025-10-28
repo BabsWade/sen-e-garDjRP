@@ -143,7 +143,7 @@ const ObjectifsPage: React.FC = () => {
                 borderRadius: 2,
               }}
             >
-              Créer un objectif
+              Créer la objectif
             </Button>
           </Box>
 

@@ -7,30 +7,30 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ element, roles }) => {
-  const token = localStorage.getItem('access');  // Récupérer le token depuis localStorage
-  let userRole = null;
+  const token = localStorage.getItem('access');  // Token JWT
+  let userRole: string | null = null;
+  let superieurHierarchique = false;
 
-  // Si le token existe, on décode pour obtenir le rôle
   if (token) {
     try {
       const decodedToken = JSON.parse(atob(token.split('.')[1]));
-      userRole = decodedToken.role;
+      userRole = decodedToken.role || null;
+      superieurHierarchique = decodedToken.superieur_hierarchique || false;
     } catch (error) {
       console.error("Erreur de décodage du token", error);
     }
   }
 
-  // Si pas de token, rediriger vers /login
+  // Pas de token → login
   if (!token) {
     return <Navigate to="/login" />;
   }
 
-  // Si le rôle de l'utilisateur n'est pas dans les rôles autorisés, rediriger vers la page d'accueil
-  if (!roles.includes(userRole)) {
+  // Vérification : rôle autorisé OU supérieur hiérarchique
+  if ((userRole === null || !roles.includes(userRole)) && !superieurHierarchique) {
     return <Navigate to="/" />;
   }
 
-  // Si tout va bien, rendre l'élément demandé
   return <>{element}</>;
 };
 

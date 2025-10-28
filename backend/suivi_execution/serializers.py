@@ -32,4 +32,4 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = ['date_envoi', 'lue_le']
 
     def get_agent_nom_complet(self, obj):
-        return f"{obj.agent.nom} {obj.agent.prenom}"
+        return f"{obj.agent.nom} {obj.agent.prenom}" if obj.agent else "Non défini"

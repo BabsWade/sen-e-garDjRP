@@ -2,28 +2,21 @@ from rest_framework import permissions
 
 from planification_alignement.models import Objectif
 
-
 class ObjectifAccessPermission(permissions.BasePermission):
-    """
-    Restriction des accès aux objectifs :
-    - Agent : accès à ses propres objectifs
-    - N+1 : accès aux objectifs des subordonnés
-    - DRH : accès complet
-    """
-
-    def has_permission(self, request, view):
-        return request.user.is_authenticated
-
     def has_object_permission(self, request, view, obj):
         user = request.user
 
+        # DRH : accès complet
         if user.role == 'DRH':
-            return True  # DRH peut tout voir
+            return True
 
+        # Superieur hiérarchique ou RESPONSABLE_N1 : accès aux objectifs de ses subordonnés et ses propres objectifs
+        if user.role == 'RESPONSABLE_N1' or getattr(user, 'superieur_hierarchique', False):
+            # Accès si l'objectif appartient à l'agent supervisé ou à soi-même
+            return obj.agent == user or (hasattr(obj.agent, 'responsable') and obj.agent.responsable == user)
+
+        # Agent simple : uniquement ses propres objectifs
         if user.role == 'AGENT':
-            return obj.agent == user  # Peut voir/modifier seulement ses objectifs
-
-        if user.role == 'RESPONSABLE_N1':
-            return obj.agent.responsable == user  # retourne True si l'agent est sous sa responsabilité
+            return obj.agent == user
 
         return False

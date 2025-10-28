@@ -26,6 +26,10 @@ from accounts.views import (MyTokenObtainPairView, AgentObjectifsAPIView,
 
 from suivi_execution import views
 
+from accounts.views import AgentDetailAPIView
+
+from planification_alignement.views import ObjectifRealisationsAPIView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
@@ -41,8 +45,11 @@ urlpatterns = [
     path('api/', include('suivi_execution.urls')),  # 👈 AJOUTE CELUI-CI
     path('api/', include('evaluation.urls')),  # 👈 AJOUTE CELUI-CI
 path('api/agent-objectifs/', AgentObjectifsAPIView.as_view(), name='agent-objectifs-root'),
+path("agent-objectifs/<int:pk>/realisations/", ObjectifRealisationsAPIView.as_view(), name="objectif-realisations"),
+
     path('api/agent-feedbacks/', AgentFeedbacksAPIView.as_view(), name='agent-feedbacks-root'),
     path('api/agent-historique-performances/', AgentHistoriquePerformanceAPIView.as_view(), name='agent-historique-root'),
     path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
+    path('agent-details/<int:agent_id>/', AgentDetailAPIView.as_view(), name='agent-details'),
 
 ]

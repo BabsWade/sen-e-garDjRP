@@ -32,6 +32,11 @@ class AgentManager(BaseUserManager):
 
 
 class Agent(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = [
+        ('AGENT', 'Agent'),
+        ('RESPONSABLE_N1', 'Responsable N+1'),
+        ('DRH', 'DRH'),
+    ]
     matricule = models.CharField(max_length=20, unique=True)
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
@@ -47,18 +52,42 @@ class Agent(AbstractBaseUser, PermissionsMixin):
         blank=True,
         related_name='subordonnes'
     )
-
-    #objectifs = models.ManyToManyField('planification_alignement.Objectif', blank=True, related_name='agents')
-    #superieur = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='subordonnes')
+    superieur_hierarchique = models.BooleanField(default=False)
 
     performance_moyenne = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     evaluation_comportementale = models.TextField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    etat_agent = models.CharField(
+        max_length=20,
+        choices=[('Actif', 'Actif'), ('Inactif', 'Inactif'), ('En pause', 'En pause')],
+        default='Actif'
+    )
 
-    # Nouveaux champs ajoutés
-    etat_agent = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif'), ('En pause', 'En pause')], default='Actif')
+    # --- Nouveaux champs facultatifs ---
+    SEXE_CHOICES = [('H', 'Homme'), ('F', 'Femme')]
+    sexe = models.CharField(max_length=1, choices=SEXE_CHOICES, null=True, blank=True)
+    date_naissance = models.DateField(null=True, blank=True)
+    lieu_naissance = models.CharField(max_length=100, null=True, blank=True)
+    nationalite = models.CharField(max_length=50, null=True, blank=True)
+    photo = models.ImageField(upload_to='photos_agents/', null=True, blank=True)
+    adresse = models.CharField(max_length=255, null=True, blank=True)
+    ville = models.CharField(max_length=50, null=True, blank=True)
+    pays = models.CharField(max_length=50, null=True, blank=True)
+    telephone = models.CharField(max_length=20, null=True, blank=True)
+    email_personnel = models.EmailField(null=True, blank=True)
+    poste = models.CharField(max_length=100, null=True, blank=True)
+    type_contrat = models.CharField(max_length=50, null=True, blank=True)
+    STATUT_CHOICES = [('Cadre', 'Cadre'), ('Non Cadre', 'Non Cadre')]
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, null=True, blank=True)
+    date_fin_contrat = models.DateField(null=True, blank=True)
+    lieu_travail = models.CharField(max_length=100, null=True, blank=True)
+    niveau_etude = models.CharField(max_length=100, null=True, blank=True)
+    diplomes = models.TextField(null=True, blank=True)
+    competences = models.TextField(null=True, blank=True)
+    langues = models.TextField(null=True, blank=True)
+    certifications = models.TextField(null=True, blank=True)
 
     USERNAME_FIELD = 'matricule'
     REQUIRED_FIELDS = ['email', 'nom', 'prenom']

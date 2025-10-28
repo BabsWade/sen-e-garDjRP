@@ -20,17 +20,40 @@ from suivi_execution.models import Notification
 
 @admin.register(Agent)
 class AgentAdmin(UserAdmin):
-    list_display = ('matricule', 'email', 'nom', 'prenom', 'role', 'is_active', 'is_staff')
-    list_filter = ('role', 'is_active', 'is_staff')
-    search_fields = ('matricule', 'email', 'nom', 'prenom')
+    list_display = (
+        'matricule', 'email', 'nom', 'prenom', 'role', 'superieur_hierarchique',
+        'poste', 'type_contrat', 'statut', 'is_active', 'is_staff'
+    )
+    list_filter = ('role', 'is_active', 'is_staff', 'statut', 'type_contrat')
+    search_fields = ('matricule', 'email', 'nom', 'prenom', 'poste')
 
     fieldsets = (
         (None, {'fields': ('matricule', 'email', 'password')}),
-        ('Infos personnelles', {'fields': ('nom', 'prenom')}),
-        ('Rôle et permissions', {
-            'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+        ('Infos personnelles', {
+            'fields': (
+                'nom', 'prenom', 'sexe', 'date_naissance', 'lieu_naissance',
+                'nationalite', 'photo', 'adresse', 'ville', 'pays',
+                'telephone', 'email_personnel'
+            )
         }),
-        ('Organisation', {'fields': ('service', 'responsable')}),
+        ('Organisation', {
+            'fields': (
+                'service', 'responsable', 'poste', 'type_contrat',
+                'statut', 'date_embauche', 'date_fin_contrat', 'lieu_travail'
+            )
+        }),
+        ('Formation & Compétences', {
+            'fields': (
+                'niveau_etude', 'diplomes', 'competences',
+                'langues', 'certifications'
+            )
+        }),
+        ('Rôle et permissions', {
+            'fields': (
+                'role', 'superieur_hierarchique', 'is_active', 'is_staff', 'is_superuser',
+                'groups', 'user_permissions'
+            )
+        }),
         ('Dates importantes', {'fields': ('last_login',)}),
     )
 
@@ -38,7 +61,8 @@ class AgentAdmin(UserAdmin):
         (None, {
             'classes': ('wide',),
             'fields': (
-                'matricule', 'email', 'nom', 'prenom', 'password1', 'password2', 'role',
+                'matricule', 'email', 'nom', 'prenom', 'password1', 'password2',
+                'role', 'poste', 'type_contrat', 'statut',
                 'is_staff', 'is_active', 'service', 'responsable'
             )
         }),

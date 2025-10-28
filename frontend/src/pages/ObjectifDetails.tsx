@@ -60,6 +60,8 @@ const ObjectifDetails: React.FC = () => {
         const resp = await api.get(`/agent-objectifs/${id}/`);
         setObjectif(resp.data);
 
+        
+
         const respRealisations = await api.get(`/realisations/?objectif=${id}`);
         setRealisations(respRealisations.data);
       } catch (error) {

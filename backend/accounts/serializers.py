@@ -11,6 +11,10 @@ from rest_framework import serializers
 from .models import Agent
 from planification_alignement.serializers import ObjectifSerializer
 from suivi_execution.serializers import RealisationSerializer
+
+from suivi_execution.models import Realisation
+
+
 class AgentRegisterSerializer(serializers.ModelSerializer):
     email2 = serializers.EmailField(write_only=True, required=True, label="Confirmer l'email")
 
@@ -70,6 +74,7 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             'service_nom',
             'responsable_nom',
             'taux_realisations_valides',
+            'superieur_hierarchique',
         ]
         read_only_fields = ['performance_moyenne']
 
@@ -129,8 +134,9 @@ class AgentDetailSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True)
     responsable_nom = serializers.SerializerMethodField()
     taux_realisations_valides = serializers.SerializerMethodField()
-    objectifs = serializers.SerializerMethodField()
+    objectifs = ObjectifSerializer(many=True, source='objectifs_planification', read_only=True)
     realisations = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()  # ✅ champ pour URL complète
 
     class Meta:
         model = Agent
@@ -141,14 +147,38 @@ class AgentDetailSerializer(serializers.ModelSerializer):
             'prenom',
             'email',
             'role',
+            'superieur_hierarchique',
             'date_embauche',
             'etat_agent',
             'service_nom',
             'responsable_nom',
             'performance_moyenne',
             'taux_realisations_valides',
+            # Nouveaux champs
+            'sexe',
+            'date_naissance',
+            'lieu_naissance',
+            'nationalite',
+            'photo',
+            'photo_url',  # ✅ bien inclus dans fields
+            'adresse',
+            'ville',
+            'pays',
+            'telephone',
+            'email_personnel',
+            'poste',
+            'type_contrat',
+            'statut',
+            'date_fin_contrat',
+            'lieu_travail',
+            'niveau_etude',
+            'diplomes',
+            'competences',
+            'langues',
+            'certifications',
+            # Objectifs et réalisations
             'objectifs',
-            'realisations'
+            'realisations',
         ]
 
     def get_responsable_nom(self, obj):
@@ -157,12 +187,27 @@ class AgentDetailSerializer(serializers.ModelSerializer):
         return "Non défini"
 
     def get_taux_realisations_valides(self, obj):
-        return obj.taux_realisations_valides()
+        objectifs = obj.objectifs_planification.all()
+        if not objectifs.exists():
+            return 0.0
 
-    def get_objectifs(self, obj):
-        return ObjectifSerializer(obj.objectifs_planification.all(), many=True).data
+        total_cibles = sum(o.cible or 0 for o in objectifs)
+        if total_cibles == 0:
+            return 0.0
+
+        total_valides = sum(o.realisations.filter(est_valide=True).count() for o in objectifs)
+        return round((total_valides / total_cibles) * 100, 2)
 
     def get_realisations(self, obj):
-        from suivi_execution.models import Realisation
-        realisations = Realisation.objects.filter(objectif__in=obj.objectifs_planification.all())
+        # Précharger les réalisations si elles ont été mises sur l'instance
+        if hasattr(obj, 'prefetched_realisations'):
+            realisations = obj.prefetched_realisations
+        else:
+            realisations = Realisation.objects.filter(objectif__agent=obj)
         return RealisationSerializer(realisations, many=True).data
+
+    def get_photo_url(self, obj):
+        request = self.context.get('request')
+        if obj.photo and request:
+            return request.build_absolute_uri(obj.photo.url)
+        return None

@@ -62,12 +62,18 @@ class ObjectifSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     taux_avancement = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
-
+    # ✅ Nouveau champ calculé pour le frontend
+    est_assigne = serializers.SerializerMethodField()
     class Meta:
         model = Objectif
         fields = '__all__'
         # selon ta logique, tu peux rendre certains champs read_only
         read_only_fields = ['agent', 'statut', 'date_validation', 'date_debut', 'taux_avancement']
+
+
+    # ✅ Méthode qui détermine si l’objectif est assigné ou non
+    def get_est_assigne(self, obj):
+        return obj.agent is not None
 
     def get_est_valide(self, obj):
         return obj.statut == 'valide'
@@ -91,6 +97,7 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             'performance_moyenne',
             'service_nom',
             'responsable_nom',
+            'superieur_hierarchique',
         ]
 
     def get_responsable_nom(self, obj):

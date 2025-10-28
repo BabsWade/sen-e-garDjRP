@@ -4,21 +4,17 @@ from django.utils import timezone
 from .models import Realisation, Notification
 from planification_alignement.models import Objectif
 from accounts.models import Agent
-
 from evaluation.models import Evaluation
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 # -------------------------------
-# 🔄 Mise à jour des objectifs et performance
+# 🔄 Mise à jour du taux d’avancement et performance
 # -------------------------------
 @receiver([post_save, post_delete], sender=Realisation)
 def maj_taux_objectif_et_performance(sender, instance, **kwargs):
-    """
-    Met à jour le taux d'avancement de l'objectif et la performance de l'agent
-    à chaque création, modification ou suppression de réalisation.
-    """
     objectif = instance.objectif
     if not objectif:
         return
@@ -35,7 +31,6 @@ def maj_taux_objectif_et_performance(sender, instance, **kwargs):
         else min((realisations_valides.count() / cible) * 100, 100.0)
     )
 
-    # --- éviter de boucler le signal post_save sur Objectif ---
     if getattr(objectif, "_updating_taux", False):
         return
 
@@ -44,12 +39,11 @@ def maj_taux_objectif_et_performance(sender, instance, **kwargs):
     objectif.save(update_fields=["taux_avancement"])
     objectif._updating_taux = False
 
-    # --- recalcul de la performance globale de l'agent ---
+    # ✅ Notification uniquement pour l’agent concerné
     if instance.agent:
         old_perf = instance.agent.performance_moyenne
         instance.agent.calculer_performance_ponderee()
 
-        # 🔔 Notification seulement si la performance change
         if instance.agent.performance_moyenne != old_perf:
             Notification.objects.create(
                 agent=instance.agent,
@@ -60,18 +54,13 @@ def maj_taux_objectif_et_performance(sender, instance, **kwargs):
 
 
 # -------------------------------
-# 🎯 Objectif : mise à jour du taux + notifications
+# 🎯 Objectif : mise à jour du taux + notifications individuelles
 # -------------------------------
 @receiver(post_save, sender=Objectif)
 def maj_et_notif_objectif(sender, instance, created, **kwargs):
-    """
-    Gère à la fois la mise à jour du taux d'avancement et les notifications
-    lors de la création ou de la mise à jour d'un objectif.
-    """
     if getattr(instance, "_updating_taux", False):
-        return  # évite le re-déclenchement pendant la mise à jour interne
+        return
 
-    # --- Calcul du taux d'avancement ---
     realisations_valides = instance.realisations.filter(est_valide=True)
     try:
         cible = float(instance.cible)
@@ -83,38 +72,35 @@ def maj_et_notif_objectif(sender, instance, created, **kwargs):
         else min((realisations_valides.count() / cible) * 100, 100.0)
     )
 
-    # Mise à jour sans relancer en boucle
     if instance.taux_avancement != taux:
         instance._updating_taux = True
         instance.taux_avancement = taux
         instance.save(update_fields=["taux_avancement"])
         instance._updating_taux = False
 
-    # --- Notifications ---
+    # ✅ Notifications ciblées (agent uniquement)
     if created:
-        # Nouveau objectif assigné
         Notification.objects.create(
             agent=instance.agent,
             message=f"Nouvel objectif assigné : {instance.libelle}",
             date_envoi=timezone.now()
         )
-    else:
-        if instance.statut == "valide":
-            Notification.objects.create(
-                agent=instance.agent,
-                message=f"Votre objectif '{instance.libelle}' a été validé ✅",
-                date_envoi=timezone.now()
-            )
-        elif instance.statut == "rejete":
-            Notification.objects.create(
-                agent=instance.agent,
-                message=f"Votre objectif '{instance.libelle}' a été rejeté ❌",
-                date_envoi=timezone.now()
-            )
+    elif instance.statut == "valide":
+        Notification.objects.create(
+            agent=instance.agent,
+            message=f"Votre objectif '{instance.libelle}' a été validé ✅",
+            date_envoi=timezone.now()
+        )
+    elif instance.statut == "rejete":
+        Notification.objects.create(
+            agent=instance.agent,
+            message=f"Votre objectif '{instance.libelle}' a été rejeté ❌",
+            date_envoi=timezone.now()
+        )
 
 
 # -------------------------------
-# 👋 Notification de création d'agent
+# 👋 Notification de création d’un agent
 # -------------------------------
 @receiver(post_save, sender=Agent)
 def creer_notification_agent(sender, instance, created, **kwargs):
@@ -132,9 +118,9 @@ def creer_notification_agent(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Realisation)
 def notif_realisation_validee(sender, instance, created, **kwargs):
     """
-    Notifie l'agent quand une de ses réalisations est validée.
+    Notifie uniquement l'agent concerné quand sa réalisation est validée.
     """
-    if instance.est_valide:
+    if instance.est_valide and instance.agent:
         Notification.objects.create(
             agent=instance.agent,
             message=f"Votre réalisation pour l’objectif '{instance.objectif.libelle}' a été validée ✅",
@@ -145,53 +131,45 @@ def notif_realisation_validee(sender, instance, created, **kwargs):
 # -------------------------------
 # 💬 Notifications sur les feedbacks
 # -------------------------------
-@receiver(post_save, sender=Realisation)  # si feedback est dans Realisation
+@receiver(post_save, sender=Realisation)
 def notif_feedback(sender, instance, **kwargs):
     """
-    Notifie l'agent quand un feedback est ajouté à une réalisation.
+    Notifie uniquement l'agent concerné quand un feedback est ajouté.
     """
-    if hasattr(instance, "feedback") and instance.feedback:
+    if instance.feedback and instance.agent:
         Notification.objects.create(
             agent=instance.agent,
             message=f"Nouveau feedback pour l’objectif '{instance.objectif.libelle}': {instance.feedback}",
             date_envoi=timezone.now()
         )
 
+
+# -------------------------------
+# 📋 Création automatique d’évaluation après validation d’un objectif
+# -------------------------------
 @receiver(post_save, sender=Objectif)
 def creer_evaluation_lors_validation(sender, instance, created, **kwargs):
-    """
-    Crée automatiquement une évaluation quand un objectif devient 'valide'.
-    """
     try:
         logger.debug(f"[signal] Objectif sauvegardé id={instance.pk} statut={instance.statut}")
     except Exception:
         pass
 
-    # On veut agir uniquement quand le statut vaut 'valide'
-    if instance.statut != "valide":
+    if instance.statut != "valide" or not instance.agent:
         return
 
-    # Protection: si pas d'agent, on ne fait rien
-    if not instance.agent:
-        logger.warning(f"Objectif {instance.pk} n'a pas d'agent ; skip creation Evaluation.")
-        return
-
-    # Eviter doublons
+    # ✅ Évite doublons
     if Evaluation.objects.filter(objectif=instance).exists():
-        logger.debug(f"Evaluation déjà existante pour objectif {instance.pk}")
         return
 
-    # Récupère le responsable depuis le bon champ
     responsable = getattr(instance.agent, "responsable", None)
     if not responsable:
-        logger.warning(f"Agent {instance.agent} n'a pas de responsable ; pas d'évaluation créée.")
+        logger.warning(f"Agent {instance.agent} n’a pas de responsable ; pas d’évaluation créée.")
         return
 
-    # Crée l'évaluation
     Evaluation.objects.create(
         agent=instance.agent,
         responsable=responsable,
         objectif=instance,
         statut="à évaluer"
     )
-    logger.info(f"Evaluation créée pour objectif {instance.pk} (agent={instance.agent.matricule})")
+    logger.info(f"✅ Evaluation créée pour objectif {instance.pk} (agent={instance.agent.matricule})")
