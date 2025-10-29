@@ -32,6 +32,10 @@ import AgentsSupervisesPage from './pages/AgentsSupervisesPage';
 import ObjectifDetailsNplus1 from './pages/ObjectifDetailsNplus1';
 import Nplus1ObjectifList from './pages/Nplus1ObjectifList';
 import ObjectifsListNplus1 from './pages/ObjectifsListNplus1';
+import MesSubordonnees from './pages/MesSubordonnees';
+import SubordonneesObjectifs from './pages/SubordonneesObjectifs';
+import ObjectifSubordonnees from './pages/ObjectifSubordonnees';
+import InfosObjectif from './pages/InfosObjectif';
 
 const App: React.FC = () => {
   return (
@@ -63,11 +67,11 @@ const App: React.FC = () => {
           path="/agents-sous-responsable"
           element={<PrivateRoute element={<AgentsSupervisesPage />} roles={['RESPONSABLE_N1']} />}
         />
-         <Route
+        <Route
           path="/objectiflistnplus1"
           element={<PrivateRoute element={<Nplus1ObjectifList />} roles={['RESPONSABLE_N1']} />}
         />
-            <Route
+        <Route
           path="/objectifslistnplus1"
           element={<PrivateRoute element={<ObjectifsListNplus1 />} roles={['RESPONSABLE_N1']} />}
         />
@@ -160,9 +164,24 @@ const App: React.FC = () => {
           }
         />
 
+        {/* --- Routes subordonnés --- */}
+        <Route path="/mes-subordonnees" element={<MesSubordonnees />} />
+        <Route path="/mes-subordonnee/:id" element={<SubordonneesObjectifs />} />
 
 
-        <Route path="/objectifs/:id" element={<ObjectifDetails />} />
+        <Route path="/objectif-superieur/:id" element={<ObjectifDetails />} />
+
+        <Route
+          path="/objectif-superieur/:id"
+          element={<ObjectifSubordonnees />}
+        />
+        <Route path="/objectif-superieur/:id" element={<InfosObjectif />} />
+
+        {/* Liste des objectifs d’un agent subordonné */}
+        <Route path="/mes-subordonnes/:id/objectifs" element={<SubordonneesObjectifs />} />
+
+        {/* Détail d’un objectif spécifique (ObjectifSubordonnees) */}
+        <Route path="/objectifs-superieur/:objectifId" element={<ObjectifSubordonnees />} />
 
       </Routes>
     </div>

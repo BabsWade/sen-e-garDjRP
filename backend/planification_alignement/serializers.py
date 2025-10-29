@@ -4,6 +4,8 @@ from .models import Periode, Service, Objectif, Indicateur, PlanStrategique, Obj
 from rest_framework import serializers
 from accounts.models import Agent, HistoriquePerformance
 
+from suivi_execution.serializers import RealisationSerializer
+
 
 class PeriodeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,6 +63,8 @@ class ObjectifSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    realisations = RealisationSerializer(many=True, read_only=True)
+
     taux_avancement = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     # ✅ Nouveau champ calculé pour le frontend
     est_assigne = serializers.SerializerMethodField()
@@ -127,3 +131,22 @@ class HistoriquePerformanceSerializer(serializers.ModelSerializer):
         model = HistoriquePerformance
         fields = ['id', 'agent', 'performance', 'date_calcul']
 
+class ObjectifSuperieurSerializer(serializers.ModelSerializer):
+    realisations = RealisationSerializer(many=True, read_only=True)
+    agent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Objectif
+        fields = ['id', 'libelle', 'type_kpi', 'cible', 'poids', 'taux_avancement',
+                  'date_debut', 'date_delai', 'statut', 'commentaire_rejet', 'realisations', 'agent']
+
+    def get_agent(self, obj):
+        agent = obj.agent
+        return {
+            'id': agent.id,
+            'nom': agent.nom,
+            'prenom': agent.prenom,
+            'fonction': agent.fonction,
+            'service_nom': agent.service.nom,
+            'email': agent.email,
+        }

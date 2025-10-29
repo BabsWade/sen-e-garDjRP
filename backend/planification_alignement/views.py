@@ -9,7 +9,7 @@ from .serializers import (
     PeriodeSerializer,
     ServiceSerializer,
     ObjectifSerializer,
-    IndicateurSerializer, PlanStrategiqueSerializer, ObjectifProgrammeSerializer
+    IndicateurSerializer, PlanStrategiqueSerializer, ObjectifProgrammeSerializer, ObjectifSuperieurSerializer
 )
 from .models import Objectif
 from accounts.models import Agent
@@ -338,3 +338,85 @@ class ObjectifRealisationsAPIView(generics.ListAPIView):
         # 🚫 Sinon : aucun accès
         return Realisation.objects.none()
 
+class ObjectifWithRealisationsForSuperior(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            objectif = Objectif.objects.get(pk=pk)
+        except Objectif.DoesNotExist:
+            return Response({"detail": "Objectif non trouvé"}, status=404)
+
+        agent = objectif.agent  # l'agent propriétaire de l'objectif
+        superieur = request.user.agent  # l'agent connecté
+
+        # Vérification : l'utilisateur est bien le supérieur hiérarchique
+        #if not agent.superieur_hierarchique or agent.responsable != superieur:
+           # raise PermissionDenied("Vous n'êtes pas autorisé à voir cet objectif.")
+        if not superieur.superieur_hierarchique or agent.responsable != superieur:
+            raise PermissionDenied("Vous n'êtes pas autorisé à voir cet objectif.")
+
+        # Sérialisation de l'objectif
+        objectif_data = ObjectifSerializer(objectif).data
+
+        # Sérialisation des réalisations liées
+        realisations = Realisation.objects.filter(objectif=objectif)
+        objectif_data['realisations'] = RealisationSerializer(realisations, many=True).data
+
+        return Response(objectif_data)
+
+
+class ObjectifDetailForSuperior(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        superieur = request.user
+
+        # Vérification que l’utilisateur est bien un supérieur hiérarchique
+        if not superieur.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        try:
+            objectif = Objectif.objects.select_related("agent").get(pk=pk)
+        except Objectif.DoesNotExist:
+            return Response({"detail": "Objectif introuvable."}, status=404)
+
+        agent = objectif.agent
+
+        # Vérification que le supérieur est bien le responsable de cet agent
+        if agent.responsable != superieur:
+            raise PermissionDenied("Cet objectif ne vous appartient pas.")
+
+        # Sérialisation des données
+        agent_data = {
+            "id": agent.id,
+            "nom": agent.nom,
+            "prenom": agent.prenom,
+            "matricule": agent.matricule,
+            "performance_moyenne": agent.performance_moyenne or 0,
+            "service_nom": agent.service.nom_service if agent.service else None,
+
+            "responsable_nom": f"{agent.responsable.prenom} {agent.responsable.nom}" if agent.responsable else None,
+            "superieur_hierarchique": agent.superieur_hierarchique,
+        }
+
+        realisations = Realisation.objects.filter(objectif=objectif)
+        realisations_data = RealisationSerializer(realisations, many=True).data
+
+        objectif_data = {
+            "id": objectif.id,
+            "libelle": objectif.libelle,
+            "taux_avancement": objectif.taux_avancement,
+            "statut": objectif.statut,
+            "poids": objectif.poids,
+            "cible": objectif.cible,
+            "type_kpi": objectif.type_kpi,
+            "date_debut": objectif.date_debut,
+            "date_delai": objectif.date_delai,
+            "realisations": realisations_data
+        }
+
+        return Response({
+            "agent": agent_data,
+            "objectif": objectif_data
+        })

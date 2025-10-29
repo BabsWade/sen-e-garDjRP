@@ -55,7 +55,7 @@ class RealisationViewSet(viewsets.ModelViewSet):
             ).distinct()
 
         return Realisation.objects.none()
-    
+
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
@@ -116,3 +116,4 @@ class RealisationUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Realisation.objects.all()
     serializer_class = RealisationSerializer
     permission_classes = [permissions.IsAuthenticated]
+
