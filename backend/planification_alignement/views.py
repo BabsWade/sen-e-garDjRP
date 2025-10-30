@@ -667,3 +667,46 @@ class ObjectifsSousResponsableAPIView(APIView):
             objectif = serializer.save(agent=agent, statut="en_attente")
             return Response(ObjectifSerializer(objectif).data, status=201)
         return Response(serializer.errors, status=400)
+# === Valider une réalisation ===
+class ValiderRealisationView(generics.UpdateAPIView):
+    queryset = Realisation.objects.all()
+    serializer_class = RealisationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        realisation = self.get_object()
+        realisation.est_valide = True
+        realisation.est_rejete = False
+        realisation.commentaire_rejet = ""
+        realisation.save()
+        return Response({'message': 'Réalisation validée avec succès'}, status=status.HTTP_200_OK)
+
+
+# === Rejeter une réalisation ===
+class RejeterRealisationView(generics.UpdateAPIView):
+    queryset = Realisation.objects.all()
+    serializer_class = RealisationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        realisation = self.get_object()
+        commentaire = request.data.get('commentaire_rejet', '')
+        realisation.est_valide = False
+        realisation.est_rejete = True
+        realisation.commentaire_rejet = commentaire
+        realisation.save()
+        return Response({'message': 'Réalisation rejetée avec succès'}, status=status.HTTP_200_OK)
+
+
+# === Modifier une réalisation ===
+class ModifierRealisationView(generics.UpdateAPIView):
+    queryset = Realisation.objects.all()
+    serializer_class = RealisationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        realisation = self.get_object()
+        description = request.data.get('description', realisation.description)
+        realisation.description = description
+        realisation.save()
+        return Response({'message': 'Réalisation modifiée avec succès'}, status=status.HTTP_200_OK)

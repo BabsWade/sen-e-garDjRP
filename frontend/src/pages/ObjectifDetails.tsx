@@ -296,7 +296,7 @@ const ObjectifDetails: React.FC = () => {
                   </Typography>
                 )}
 
-                {!r.est_valide && !r.est_rejete && (
+                {!r.est_valide &&  (
                   <Box sx={{ mt: 2 }}>
                     <Button
                       component={Link}

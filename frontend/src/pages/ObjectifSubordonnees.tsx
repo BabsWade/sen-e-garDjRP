@@ -193,6 +193,52 @@ const ObjectifSubordonnees: React.FC = () => {
     }
   };
 
+  // === Handlers pour les RÉALISATIONS ===
+
+  const handleValiderRealisation = async (realisationId: number) => {
+    try {
+      await api.post(`/realisations/${realisationId}/valider/`);
+      setMessage({ type: 'success', text: 'Réalisation validée ✅' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors de la validation ❌' });
+    }
+  };
+
+  const handleRejeterRealisation = async (realisationId: number) => {
+    const commentaire = prompt("Entrez un commentaire pour le rejet :");
+    if (!commentaire) return;
+
+    try {
+      await api.post(`/realisations/${realisationId}/rejeter/`, {
+        commentaire_rejet: commentaire,
+      });
+      setMessage({ type: 'success', text: 'Réalisation rejetée ❌' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors du rejet ❌' });
+    }
+  };
+
+  const handleModifierRealisation = async (realisationId: number, ancienneDescription: string) => {
+    const nouvelleDescription = prompt("Modifier la description :", ancienneDescription);
+    if (!nouvelleDescription) return;
+
+    try {
+      await api.put(`/realisations/${realisationId}/modifier/`, {
+        description: nouvelleDescription,
+      });
+      setMessage({ type: 'success', text: 'Réalisation modifiée ✏️' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors de la modification ❌' });
+    }
+  };
+
+
   return (
     <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
       <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
@@ -283,8 +329,8 @@ const ObjectifSubordonnees: React.FC = () => {
                             objectif.taux_avancement === 100
                               ? '#43a047'
                               : objectif.taux_avancement >= 50
-                              ? '#1976d2'
-                              : '#fbc02d',
+                                ? '#1976d2'
+                                : '#fbc02d',
                         },
                       }}
                     />
@@ -355,7 +401,9 @@ const ObjectifSubordonnees: React.FC = () => {
           </Typography>
 
           {objectif.realisations.length === 0 ? (
-            <Typography color="text.secondary">Aucune réalisation trouvée pour cet objectif.</Typography>
+            <Typography color="text.secondary">
+              Aucune réalisation trouvée pour cet objectif.
+            </Typography>
           ) : (
             objectif.realisations.map((r) => (
               <Fade in key={r.id}>
@@ -371,6 +419,7 @@ const ObjectifSubordonnees: React.FC = () => {
                   <Typography variant="body1" sx={{ mb: 1 }}>
                     <strong>Description :</strong> {r.description}
                   </Typography>
+
                   {r.preuve && (
                     <Typography variant="body2">
                       <a
@@ -383,6 +432,7 @@ const ObjectifSubordonnees: React.FC = () => {
                       </a>
                     </Typography>
                   )}
+
                   <Chip
                     label={
                       r.est_valide ? 'Validée ✅' : r.est_rejete ? 'Rejetée ❌' : 'En attente ⏳'
@@ -394,6 +444,43 @@ const ObjectifSubordonnees: React.FC = () => {
                       fontWeight: 'bold',
                     }}
                   />
+
+                  {peutAgir && (
+                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                      <Tooltip title="Valider cette réalisation">
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          onClick={() => handleValiderRealisation(r.id)}
+                        >
+                          Valider
+                        </Button>
+                      </Tooltip>
+
+                      <Tooltip title="Rejeter cette réalisation">
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={() => handleRejeterRealisation(r.id)}
+                        >
+                          Rejeter
+                        </Button>
+                      </Tooltip>
+
+                      <Tooltip title="Modifier la réalisation">
+                        <Button
+                          variant="text"
+                          color="primary"
+                          size="small"
+                          onClick={() => handleModifierRealisation(r.id, r.description)}
+                        >
+                          Modifier
+                        </Button>
+                      </Tooltip>
+                    </Stack>
+                  )}
                 </Card>
               </Fade>
             ))

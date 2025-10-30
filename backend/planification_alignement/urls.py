@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 from .views import PeriodeViewSet, ServiceViewSet, ObjectifViewSet, PerformanceAPIView, IndicateurViewSet, \
     AgentDashboardView, PlanStrategiqueViewSet, ObjectifProgrammeViewSet, ObjectifDetailAPIView, \
     ObjectifRealisationsAPIView, ObjectifWithRealisationsForSuperior, ObjectifDetailForSuperior, RejeterObjectifAPIView, \
-    ValiderObjectifAPIView, ObjectifModifierForSuperior, modifier_objectif, ObjectifsSousResponsableAPIView
+    ValiderObjectifAPIView, ObjectifModifierForSuperior, modifier_objectif, ObjectifsSousResponsableAPIView, \
+    RejeterRealisationView, ValiderRealisationView, \
+    ModifierRealisationView
 from suivi_execution import views
 from .views import AgentsSousResponsableViewSet
 
@@ -35,5 +37,8 @@ urlpatterns = [
     path('objectifs/<int:pk>/modifier/', modifier_objectif, name='modifier_objectif'),
     #path('objectifs-superieur/<int:pk>/', ObjectifSuperieurDetail.as_view(), name='objectifs_superieur_detail'),
 path('objectifs-sous-responsable/', ObjectifsSousResponsableAPIView.as_view(), name='objectifs-sous-responsable'),
+path('realisations/<int:pk>/valider/', ValiderRealisationView.as_view(), name='valider_realisation'),
+    path('realisations/<int:pk>/rejeter/', RejeterRealisationView.as_view(), name='rejeter_realisation'),
+    path('realisations/<int:pk>/modifier/', ModifierRealisationView.as_view(), name='modifier_realisation'),
 
 ]
