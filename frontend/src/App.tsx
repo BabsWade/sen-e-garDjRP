@@ -36,6 +36,7 @@ import MesSubordonnees from './pages/MesSubordonnees';
 import SubordonneesObjectifs from './pages/SubordonneesObjectifs';
 import ObjectifSubordonnees from './pages/ObjectifSubordonnees';
 import InfosObjectif from './pages/InfosObjectif';
+import ObjectifsSousResponsable from './pages/ObjectifsSousResponsable';
 
 const App: React.FC = () => {
   return (
@@ -119,6 +120,12 @@ const App: React.FC = () => {
           path="/realisations"
           element={<PrivateRoute element={<><Navbar /><RealisationsPage /></>} roles={['AGENT', 'RESPONSABLE_N1']} />}
         />
+<Route
+          path="/objectifs-sous-responsable"
+          element={<PrivateRoute element={<><Navbar /><ObjectifsSousResponsable /></>} roles={['DRH', 'RESPONSABLE_N1']} />}
+        />
+
+
         <Route
           path="/realisations/create"
           element={<PrivateRoute element={<><Navbar /><CreateRealisationPage /></>} roles={['AGENT']} />}
@@ -183,6 +190,7 @@ const App: React.FC = () => {
         {/* Détail d’un objectif spécifique (ObjectifSubordonnees) */}
         <Route path="/objectifs-superieur/:objectifId" element={<ObjectifSubordonnees />} />
         <Route path="/objectifs/:id" element={<ObjectifDetails />} />
+        <Route path="/objectifs-sous-responsable" element={<ObjectifsSousResponsable />} />
 
       </Routes>
     </div>

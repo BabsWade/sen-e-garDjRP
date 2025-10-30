@@ -616,3 +616,54 @@ def modifier_objectif(request, pk):
         return Response({"message": "Objectif modifié avec succès.", "objectif": serializer.data})
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# --- VUE : Lister et créer les objectifs des agents supervisés ---
+class ObjectifsSousResponsableAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Liste tous les objectifs des agents sous la responsabilité du supérieur"""
+        user = request.user
+        if not user.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        # Récupérer les agents supervisés
+        agents = Agent.objects.filter(responsable=user)
+        objectifs = Objectif.objects.filter(agent__in=agents).select_related("agent")
+
+        data = []
+        for obj in objectifs:
+            data.append({
+                "id": obj.id,
+                "libelle": obj.libelle,
+                "agent": f"{obj.agent.prenom} {obj.agent.nom}",
+                "statut": obj.statut,
+                "type_kpi": obj.type_kpi,
+                "cible": obj.cible,
+                "poids": obj.poids,
+                "taux_avancement": obj.taux_avancement,
+            })
+        return Response(data, status=200)
+
+    def post(self, request):
+        """Créer un nouvel objectif pour un agent sous sa responsabilité"""
+        user = request.user
+        if not user.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        data = request.data
+        agent_id = data.get("agent")
+
+        try:
+            agent = Agent.objects.get(id=agent_id)
+        except Agent.DoesNotExist:
+            return Response({"detail": "Agent introuvable."}, status=404)
+
+        if agent.responsable != user:
+            raise PermissionDenied("Vous ne pouvez créer un objectif que pour vos subordonnés.")
+
+        serializer = ObjectifSerializer(data=data)
+        if serializer.is_valid():
+            objectif = serializer.save(agent=agent, statut="en_attente")
+            return Response(ObjectifSerializer(objectif).data, status=201)
+        return Response(serializer.errors, status=400)

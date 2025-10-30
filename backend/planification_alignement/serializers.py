@@ -48,13 +48,16 @@ class ObjectifSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+
     plan_strategique = PlanStrategiqueSerializer(read_only=True)
     plan_strategique_id = serializers.PrimaryKeyRelatedField(
         source='plan_strategique',
         queryset=PlanStrategique.objects.all(),
         write_only=True,
         required=False,
-        allow_null=True)
+        allow_null=True
+    )
+
     indicateur = IndicateurSerializer(read_only=True)
     indicateur_id = serializers.PrimaryKeyRelatedField(
         source='indicateur',
@@ -63,27 +66,41 @@ class ObjectifSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    realisations = RealisationSerializer(many=True, read_only=True)
 
-    taux_avancement = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
-    # ✅ Nouveau champ calculé pour le frontend
+    realisations = RealisationSerializer(many=True, read_only=True)
+    taux_avancement = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        read_only=True
+    )
+
+    # ✅ Champ calculé pour le frontend
     est_assigne = serializers.SerializerMethodField()
+
     class Meta:
         model = Objectif
         fields = '__all__'
-        # selon ta logique, tu peux rendre certains champs read_only
-        read_only_fields = ['agent', 'statut', 'date_validation', 'date_debut', 'taux_avancement']
+        read_only_fields = [
+            'agent',
+            'statut',
+            'date_validation',
+            'date_debut',
+            'taux_avancement'
+        ]
 
-
-    # ✅ Méthode qui détermine si l’objectif est assigné ou non
+    # ✅ Méthodes utilitaires
     def get_est_assigne(self, obj):
+        """Retourne True si l’objectif est assigné à un agent."""
         return obj.agent is not None
 
     def get_est_valide(self, obj):
+        """Retourne True si l’objectif est validé."""
         return obj.statut == 'valide'
 
     def get_est_rejete(self, obj):
+        """Retourne True si l’objectif est rejeté."""
         return obj.statut == 'rejete'
+
 
 class AgentPerformanceSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True,  required=False,
