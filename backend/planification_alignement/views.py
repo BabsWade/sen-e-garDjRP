@@ -87,26 +87,98 @@ class ObjectifViewSet(viewsets.ModelViewSet):
             return Objectif.objects.all()
         elif user.role == 'RESPONSABLE_N1':
             return Objectif.objects.filter(agent__responsable=user)
-
-            #return Objectif.objects.filter(agent__responsable_matricule=user.matricule)
         elif user.role == 'AGENT':
             return Objectif.objects.filter(agent=user)
         return Objectif.objects.none()
 
-    @action(detail=True, methods=['post'], url_path='rejeter', url_name='rejeter_objectif')
-    def rejeter_objectif(self, request, pk=None):
+    def perform_create(self, serializer):
+        agent = self.request.user
+        service = agent.service
+        annee = serializer.validated_data['periode'].date_debut.year
+
+        serializer.save(agent=agent, service=service, annee=annee)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user = request.user
+
+        # Objectif validé → seul DRH ou supérieur peut modifier
+        if instance.statut == 'valide' and not user.superieur_hierarchique and user.role != 'DRH':
+            return Response(
+                {'detail': "Objectif validé. Vous ne pouvez plus le modifier."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Objectif rejeté → seul l’agent peut le reformuler
+        if instance.statut == 'rejete' and user != instance.agent:
+            return Response(
+                {'detail': "Objectif rejeté. Il doit être reformulé par l'agent."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Autoriser l’agent, son responsable, ou un supérieur hiérarchique
+        if user != instance.agent and user != instance.agent.responsable and not user.superieur_hierarchique:
+            return Response({'detail': 'Non autorisé.'}, status=403)
+
+        return super().update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='valider')
+    def valider_objectif(self, request, pk=None):
+        """
+        Le supérieur hiérarchique ou le responsable N+1 valide un objectif.
+        """
         objectif = self.get_object()
         user = request.user
 
-        if user.role != 'RESPONSABLE_N1':
-            return Response({'detail': "Permission refusée."}, status=status.HTTP_403_FORBIDDEN)
+        # Vérification : seul supérieur hiérarchique ou N+1 autorisé
+        if not user.superieur_hierarchique and user.role != "RESPONSABLE_N1":
+            return Response(
+                {'detail': "Accès refusé : vous n'êtes pas autorisé à valider cet objectif."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        if objectif.agent.responsable_matricule != user.matricule:
-            return Response({'detail': "Vous n'êtes pas le N+1 de cet agent."}, status=status.HTTP_403_FORBIDDEN)
+        # Vérifie la relation hiérarchique
+        if objectif.agent.responsable != user and not user.superieur_hierarchique:
+            return Response(
+                {'detail': "Cet agent n'est pas sous votre supervision."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        objectif.statut = 'valide'
+        objectif.date_validation = timezone.now()
+        objectif.commentaire_rejet = ""
+        objectif.save()
+
+        return Response({'detail': 'Objectif validé avec succès.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='rejeter')
+    def rejeter_objectif(self, request, pk=None):
+        """
+        Le supérieur hiérarchique ou le responsable N+1 rejette un objectif.
+        """
+        objectif = self.get_object()
+        user = request.user
+
+        # Vérification : seul supérieur hiérarchique ou N+1 autorisé
+        if not user.superieur_hierarchique and user.role != "RESPONSABLE_N1":
+            return Response(
+                {'detail': "Accès refusé : vous n'êtes pas autorisé à rejeter cet objectif."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Vérifie la relation hiérarchique
+        if objectif.agent.responsable != user and not user.superieur_hierarchique:
+            return Response(
+                {'detail': "Cet agent n'est pas sous votre supervision."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         commentaire = request.data.get('commentaire_rejet', '').strip()
         if not commentaire:
-            return Response({'detail': "Le commentaire de rejet est obligatoire."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': "Le commentaire de rejet est obligatoire."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         objectif.statut = 'rejete'
         objectif.commentaire_rejet = commentaire
@@ -114,37 +186,6 @@ class ObjectifViewSet(viewsets.ModelViewSet):
         objectif.save()
 
         return Response({'detail': 'Objectif rejeté avec succès.'}, status=status.HTTP_200_OK)
-
-    def perform_create(self, serializer):
-        agent = self.request.user
-        service = agent.service
-        annee = serializer.validated_data['periode'].date_debut.year
-
-        serializer.save(
-            agent=agent,
-            service=service,
-            annee=annee
-        )
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        if instance.statut == 'valide' and request.user.role == 'AGENT':
-            return Response(
-                {'detail': "Objectif validé. Vous ne pouvez plus le modifier."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        if instance.statut == 'rejete' and request.user.role != 'AGENT':
-            return Response(
-                {'detail': "Objectif déjà rejeté. Il doit être reformulé par l'agent."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        if request.user != instance.agent:
-            return Response({'detail': 'Non autorisé.'}, status=403)
-        return super().update(request, *args, **kwargs)
-
 
 class PerformanceAPIView(APIView):
     permission_classes = [IsAuthenticated]

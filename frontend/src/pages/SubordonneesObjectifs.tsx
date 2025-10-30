@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import api from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
+import SidebarNplus1 from '../components/SidebarNplus1';
 
 interface Objectif {
   id: number;
@@ -65,7 +66,7 @@ const SubordonneesObjectifs: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
-      <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+      <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
 
       <Box
         component="main"

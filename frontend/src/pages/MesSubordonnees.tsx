@@ -58,19 +58,20 @@ const MesSubordonnees: React.FC = () => {
         <Typography sx={{ mt: 2 }}>Chargement...</Typography>
       </Box>
     );
+    
 
   return (
-    <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
-      <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+    <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
+    <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+
+    <Box
+      component="main"
+      sx={{
+        flexGrow: 1,
+        width: { md: `calc(100% - ${drawerWidth}px)` },
+        backgroundColor: 'background.default',
+      }}
+    >
         <Topbar title="Mes subordonnés" handleDrawerToggle={handleDrawerToggle} />
 
         <Box sx={{ p: 3, mt: { xs: '56px', md: '64px' } }}>

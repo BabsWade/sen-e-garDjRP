@@ -12,11 +12,25 @@ import {
   Chip,
   LinearProgress,
   Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+  Alert,
+  Stack,
+  Tooltip,
+  Fade,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import api from '../api';
+import SidebarNplus1 from '../components/SidebarNplus1';
 
 interface Realisation {
   id: number;
@@ -56,6 +70,7 @@ interface Agent {
 interface ApiResponse {
   agent: Agent;
   objectif: Objectif;
+  peutAgir?: boolean;
 }
 
 const drawerWidth = 300;
@@ -67,33 +82,49 @@ const ObjectifSubordonnees: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const [openRejetDialog, setOpenRejetDialog] = useState(false);
+  const [commentaire, setCommentaire] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [openModifierDialog, setOpenModifierDialog] = useState(false);
+  const [nouveauLibelle, setNouveauLibelle] = useState('');
+  const [nouvelleCible, setNouvelleCible] = useState<number | ''>('');
+  const [openValiderDialog, setOpenValiderDialog] = useState(false);
+
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
+  const fetchData = async () => {
+    try {
+      const resp = await api.get(`/objectifs-superieur/${objectifId}/`);
+      setData(resp.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des détails :', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resp = await api.get(`/objectifs-superieur/${objectifId}/`);
-        setData(resp.data);
-      } catch (error) {
-        console.error('Erreur lors du chargement des détails :', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, [objectifId]);
 
   if (loading)
     return (
       <Box sx={{ textAlign: 'center', mt: 10 }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Chargement...</Typography>
+        <CircularProgress thickness={5} size={60} sx={{ color: '#1976d2' }} />
+        <Typography sx={{ mt: 2, fontWeight: 500, color: 'text.secondary' }}>
+          Chargement en cours...
+        </Typography>
       </Box>
     );
 
   if (!data) return <Typography>Aucun objectif trouvé.</Typography>;
 
   const { agent, objectif } = data;
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const peutAgir =
+    objectif.statut === 'en_attente' &&
+    (currentUser.role === 'DRH' || currentUser.id === agent.responsable_id);
 
   const statutLabels: Record<string, string> = {
     en_attente: '⏳ En attente',
@@ -107,155 +138,316 @@ const ObjectifSubordonnees: React.FC = () => {
     rejete: '#e53935',
   };
 
+  // === UI Modernisé ===
+  const cardStyle = {
+    borderRadius: 3,
+    p: 3,
+    mb: 3,
+    boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+    background: 'linear-gradient(145deg, #ffffff, #f5f7fa)',
+    transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 28px rgba(0,0,0,0.1)' },
+  };
+
   return (
-    <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
-      <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+    <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
+      <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          display: 'flex',
-          flexDirection: 'column',
+          backgroundColor: 'background.default',
         }}
       >
         <Topbar title="Détails de l'objectif" handleDrawerToggle={handleDrawerToggle} />
-        <Box sx={{ p: 3, mt: { xs: '56px', md: '64px' } }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, mt: { xs: '56px', md: '64px' } }}>
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate(-1)}
-            sx={{ mb: 2 }}
+            variant="outlined"
+            color="primary"
+            sx={{ mb: 3, fontWeight: 600 }}
           >
-            Retour à mes objectifs
+            Retour
           </Button>
 
-          {/* --- Infos agent --- */}
-          <Card sx={{ mb: 4, borderRadius: 3, p: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: '#1976d2' }}>{agent.prenom[0]}</Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  👤 {agent.nom} {agent.prenom}
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                <Typography>Matricule : {agent.matricule}</Typography>
-                <Typography>Performance moyenne : {agent.performance_moyenne}%</Typography>
-                <Typography>Service : {agent.service_nom}</Typography>
-                <Typography>Responsable : {agent.responsable_nom}</Typography>
-                <Typography>
-                  Supérieur hiérarchique : {agent.superieur_hierarchique ? 'Oui' : 'Non'}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* --- Objectif --- */}
-          <Card sx={{ mb: 4, borderRadius: 3, p: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-                🎯 {objectif.libelle}
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body1"><strong>Type KPI :</strong> {objectif.type_kpi}</Typography>
-              <Typography variant="body1"><strong>Cible :</strong> {objectif.cible}</Typography>
-              <Typography variant="body1"><strong>Poids :</strong> {objectif.poids}%</Typography>
-
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="body2">Taux d’avancement : {objectif.taux_avancement}%</Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={objectif.taux_avancement}
+          {/* Infos agent */}
+          <Fade in timeout={400}>
+            <Card sx={cardStyle}>
+              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Avatar
                   sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    mt: 0.5,
-                    backgroundColor: '#e0e0e0',
-                    '& .MuiLinearProgress-bar': {
-                      backgroundColor:
-                        objectif.taux_avancement < 50
-                          ? '#fbc02d'
-                          : objectif.taux_avancement < 100
-                          ? '#1976d2'
-                          : '#4caf50',
-                    },
+                    bgcolor: '#1565c0',
+                    width: 60,
+                    height: 60,
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 10px rgba(21,101,192,0.3)',
+                  }}
+                >
+                  {agent.prenom[0]}
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    👤 {agent.nom} {agent.prenom}
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mt: 1 }}>
+                    Matricule : {agent.matricule} • Service : {agent.service_nom}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Responsable : {agent.responsable_nom}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Fade>
+
+          {/* Objectif */}
+          <Fade in timeout={500}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  🎯 {objectif.libelle}
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                <Stack spacing={1.2}>
+                  <Typography>
+                    <strong>Type KPI :</strong> {objectif.type_kpi}
+                  </Typography>
+                  <Typography>
+                    <strong>Cible :</strong> {objectif.cible}
+                  </Typography>
+                  <Typography>
+                    <strong>Poids :</strong> {objectif.poids}%
+                  </Typography>
+
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Taux d’avancement : {objectif.taux_avancement}%
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={objectif.taux_avancement}
+                      sx={{
+                        mt: 1,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: '#e0e0e0',
+                        '& .MuiLinearProgress-bar': {
+                          background:
+                            objectif.taux_avancement === 100
+                              ? '#43a047'
+                              : objectif.taux_avancement >= 50
+                                ? '#1976d2'
+                                : '#fbc02d',
+                        },
+                      }}
+                    />
+                  </Box>
+                </Stack>
+
+                <Chip
+                  label={statutLabels[objectif.statut]}
+                  sx={{
+                    mt: 3,
+                    bgcolor: statutCouleurs[objectif.statut],
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: 1,
+                    fontSize: '0.9rem',
                   }}
                 />
-              </Box>
 
-              <Typography variant="body1"><strong>Date de début :</strong> {objectif.date_debut || '—'}</Typography>
-              <Typography variant="body1"><strong>Date limite :</strong> {objectif.date_delai || '—'}</Typography>
+                {/* Boutons d’action */}
+                <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+                  {peutAgir && (
+                    <>
+                      <Tooltip title="Valider">
+                        <Button
+                          startIcon={<CheckCircleOutlineIcon />}
+                          variant="contained"
+                          color="success"
+                          onClick={() => setOpenValiderDialog(true)}
+                          sx={{ borderRadius: 2, px: 2 }}
+                        >
+                          Valider
+                        </Button>
+                      </Tooltip>
+                      <Tooltip title="Rejeter">
+                        <Button
+                          startIcon={<CancelOutlinedIcon />}
+                          variant="outlined"
+                          color="error"
+                          onClick={() => setOpenRejetDialog(true)}
+                          sx={{ borderRadius: 2, px: 2 }}
+                        >
+                          Rejeter
+                        </Button>
+                      </Tooltip>
+                    </>
+                  )}
+                  <Tooltip title="Modifier cet objectif">
+                    <Button
+                      startIcon={<EditOutlinedIcon />}
+                      variant="text"
+                      color="primary"
+                      onClick={() => {
+                        setNouveauLibelle(objectif.libelle);
+                        setNouvelleCible(objectif.cible);
+                        setOpenModifierDialog(true);
+                      }}
+                      sx={{
+                        fontWeight: 600,
+                        '&:hover': { textDecoration: 'underline' },
+                      }}
+                    >
+                      Modifier
+                    </Button>
+                  </Tooltip>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Fade>
 
-              <Chip
-                label={statutLabels[objectif.statut]}
-                sx={{
-                  mt: 2,
-                  bgcolor: statutCouleurs[objectif.statut],
-                  color: 'white',
-                  fontWeight: 'bold',
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* --- Réalisations --- */}
+          {/* Réalisations */}
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Réalisations liées à cet objectif
+            Réalisations liées
           </Typography>
 
           {objectif.realisations.length === 0 ? (
-            <Typography color="text.secondary">Aucune réalisation trouvée pour cet objectif.</Typography>
+            <Typography color="text.secondary">
+              Aucune réalisation trouvée pour cet objectif.
+            </Typography>
           ) : (
             objectif.realisations.map((r) => (
-              <Card
-                key={r.id}
-                sx={{ mb: 2, borderRadius: 2, p: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
-              >
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  <strong>Description :</strong> {r.description}
-                </Typography>
-
-                {r.preuve && (
-                  <Typography variant="body2">
-                    <strong>Preuve :</strong>{' '}
-                    <a href={r.preuve} target="_blank" rel="noopener noreferrer">
-                      Voir le document
-                    </a>
-                  </Typography>
-                )}
-
-                <Chip
-                  label={
-                    r.est_valide ? 'Validée ✅' : r.est_rejete ? 'Rejetée ❌' : 'En attente ⏳'
-                  }
+              <Fade in key={r.id}>
+                <Card
                   sx={{
-                    mt: 2,
-                    bgcolor: r.est_valide ? '#4caf50' : r.est_rejete ? '#e53935' : '#fbc02d',
-                    color: 'white',
-                    fontWeight: 'bold',
+                    mb: 2,
+                    borderRadius: 2,
+                    p: 2,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    '&:hover': { boxShadow: '0 6px 18px rgba(0,0,0,0.12)' },
                   }}
-                />
-
-                {r.est_rejete && r.commentaire_rejet && (
-                  <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                    💬 Commentaire : {r.commentaire_rejet}
+                >
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    <strong>Description :</strong> {r.description}
                   </Typography>
-                )}
-
-                {!r.est_valide && !r.est_rejete && (
-                  <Box sx={{ mt: 2 }}>
-                    <Button
-                      component={Link}
-                      to={`/realisations/${r.id}/edit`}
-                      variant="outlined"
-                      size="small"
-                    >
-                      Modifier cette réalisation
-                    </Button>
-                  </Box>
-                )}
-              </Card>
+                  {r.preuve && (
+                    <Typography variant="body2">
+                      <a
+                        href={r.preuve}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#1976d2', textDecoration: 'none' }}
+                      >
+                        📎 Voir le document
+                      </a>
+                    </Typography>
+                  )}
+                  <Chip
+                    label={
+                      r.est_valide
+                        ? 'Validée ✅'
+                        : r.est_rejete
+                          ? 'Rejetée ❌'
+                          : 'En attente ⏳'
+                    }
+                    sx={{
+                      mt: 2,
+                      bgcolor: r.est_valide
+                        ? '#4caf50'
+                        : r.est_rejete
+                          ? '#e53935'
+                          : '#fbc02d',
+                      color: 'white',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                </Card>
+              </Fade>
             ))
           )}
+
+          {/* Dialogs et Snackbar inchangés */}
+          {/* === Dialogs === */}
+          <Dialog open={openRejetDialog} onClose={() => setOpenRejetDialog(false)}>
+            <DialogTitle>Rejeter l’objectif</DialogTitle>
+            <DialogContent>
+              <TextField
+                label="Commentaire"
+                fullWidth
+                multiline
+                rows={3}
+                value={commentaire}
+                onChange={(e) => setCommentaire(e.target.value)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenRejetDialog(false)}>Annuler</Button>
+              <Button variant="contained" color="error" onClick={() => { }}>
+                Confirmer le rejet
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={openModifierDialog} onClose={() => setOpenModifierDialog(false)}>
+            <DialogTitle>Modifier l’objectif</DialogTitle>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                label="Libellé"
+                fullWidth
+                value={nouveauLibelle}
+                onChange={(e) => setNouveauLibelle(e.target.value)}
+              />
+              <TextField
+                label="Cible"
+                type="number"
+                fullWidth
+                value={nouvelleCible}
+                onChange={(e) => setNouvelleCible(Number(e.target.value))}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenModifierDialog(false)}>Annuler</Button>
+              <Button variant="contained" color="primary" onClick={() => { }}>
+                Enregistrer
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={openValiderDialog} onClose={() => setOpenValiderDialog(false)}>
+            <DialogTitle>Valider l’objectif</DialogTitle>
+            <DialogContent>
+              <TextField
+                label="Commentaire (optionnel)"
+                fullWidth
+                multiline
+                rows={3}
+                value={commentaire}
+                onChange={(e) => setCommentaire(e.target.value)}
+              />
+              <Typography sx={{ mt: 1 }}>Confirmez la validation ?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenValiderDialog(false)}>Annuler</Button>
+              <Button variant="contained" color="primary" onClick={() => { }}>
+                Confirmer
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Snackbar
+            open={!!message}
+            autoHideDuration={3000}
+            onClose={() => setMessage(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          >
+            <Alert severity={message?.type}>{message?.text}</Alert>
+          </Snackbar>
         </Box>
       </Box>
     </Box>
