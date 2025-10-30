@@ -233,4 +233,3 @@ class AgentDetailAPIView(APIView):
 
         serializer = AgentDetailSerializer(agent, context={'request': request})
         return Response(serializer.data)
-

@@ -27,7 +27,12 @@ from rest_framework.exceptions import PermissionDenied
 from suivi_execution.models import Realisation
 from suivi_execution.serializers import RealisationSerializer
 
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Objectif
+from .serializers import ObjectifSerializer
 # Permissions personnalisées
 class IsDRH(BasePermission):
     def has_permission(self, request, view):
@@ -120,7 +125,16 @@ class ObjectifViewSet(viewsets.ModelViewSet):
         if user != instance.agent and user != instance.agent.responsable and not user.superieur_hierarchique:
             return Response({'detail': 'Non autorisé.'}, status=403)
 
-        return super().update(request, *args, **kwargs)
+        # 🟢 Si l’objectif était "rejete" et que l’agent le modifie → repasse à "en_attente"
+        data = request.data.copy()
+        if instance.statut == "rejete" and user == instance.agent:
+            data["statut"] = "en_attente"
+
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='valider')
     def valider_objectif(self, request, pk=None):
@@ -461,3 +475,144 @@ class ObjectifDetailForSuperior(APIView):
             "agent": agent_data,
             "objectif": objectif_data
         })
+
+class ValiderObjectifAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        superieur = request.user
+
+        # Vérifier que l'utilisateur est un supérieur hiérarchique
+        if not superieur.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        try:
+            objectif = Objectif.objects.select_related("agent").get(pk=pk)
+        except Objectif.DoesNotExist:
+            return Response({"detail": "Objectif introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Vérifier que le supérieur est bien responsable de l'agent
+        if objectif.agent.responsable != superieur:
+            raise PermissionDenied("Cet objectif ne vous appartient pas.")
+
+        # Valider l’objectif
+        objectif.statut = "valide"
+        objectif.save()
+
+        return Response(
+            {"message": f"L’objectif « {objectif.libelle} » a été validé avec succès."},
+            status=status.HTTP_200_OK
+        )
+
+class RejeterObjectifAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        superieur = request.user
+
+        if not superieur.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        try:
+            objectif = Objectif.objects.select_related("agent").get(pk=pk)
+        except Objectif.DoesNotExist:
+            return Response({"detail": "Objectif introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if objectif.agent.responsable != superieur:
+            raise PermissionDenied("Cet objectif ne vous appartient pas.")
+
+        motif = request.data.get("motif", "").strip()
+        objectif.statut = "rejete"
+        objectif.motif_rejet = motif
+        objectif.save()
+
+        return Response(
+            {
+                "message": f"L’objectif « {objectif.libelle} » a été rejeté.",
+                "motif_rejet": motif
+            },
+            status=status.HTTP_200_OK
+        )
+
+class ObjectifModifierForSuperior(APIView):
+    """
+    Permet au supérieur hiérarchique de modifier un objectif d’un agent sous sa responsabilité.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        superieur = request.user
+
+        # ✅ Vérifie que l'utilisateur est bien un supérieur hiérarchique
+        if not superieur.superieur_hierarchique:
+            raise PermissionDenied("Accès refusé : vous n’êtes pas un supérieur hiérarchique.")
+
+        try:
+            objectif = Objectif.objects.select_related("agent").get(pk=pk)
+        except Objectif.DoesNotExist:
+            return Response({"detail": "Objectif introuvable."}, status=404)
+
+        agent = objectif.agent
+
+        # ✅ Vérifie que le supérieur est bien le responsable de cet agent
+        if agent.responsable != superieur:
+            raise PermissionDenied("Cet agent n'est pas sous votre supervision.")
+
+        # ✅ Données modifiables uniquement
+        data = request.data
+        champs_modifiables = [
+            "libelle", "poids", "cible", "type_kpi",
+            "date_debut", "date_delai"
+        ]
+
+        for champ in champs_modifiables:
+            if champ in data:
+                setattr(objectif, champ, data[champ])
+
+        objectif.date_validation = timezone.now()
+        objectif.save()
+
+        return Response(
+            {"detail": "Objectif modifié avec succès."},
+            status=status.HTTP_200_OK
+        )
+# ✅ Endpoint séparé (si tu veux l’appeler explicitement depuis le frontend)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def modifier_objectif(request, pk):
+    """
+    Permet à un responsable (N+1) ou DRH de modifier un objectif d’un agent subordonné.
+    Si un objectif était 'rejete' et que l’agent le modifie → revient à 'en_attente'.
+    """
+    try:
+        objectif = Objectif.objects.get(pk=pk)
+    except Objectif.DoesNotExist:
+        return Response({"detail": "Objectif non trouvé."}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    agent = objectif.agent
+
+    # 🚫 Seuls le DRH ou le responsable N+1 du subordonné peuvent modifier
+    if not (user.role == 'DRH' or user == agent.responsable or user == agent):
+        return Response(
+            {"detail": "Accès refusé. Seuls le DRH, le responsable N+1 ou l’agent concerné peuvent modifier."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    data = request.data.copy()
+
+    # 🟢 Si rejeté et modifié par l’agent → statut revient à "en_attente"
+    if objectif.statut == "rejete" and user == agent:
+        data["statut"] = "en_attente"
+
+    champs_autorises = ['libelle', 'cible', 'poids', 'type_kpi', 'date_debut', 'date_delai']
+    for champ in list(data.keys()):
+        if champ not in champs_autorises + ['statut']:
+            data.pop(champ)
+
+    serializer = ObjectifSerializer(objectif, data=data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Objectif modifié avec succès.", "objectif": serializer.data})
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -83,6 +83,8 @@ class Objectif(models.Model):
     #est_valide = models.BooleanField(default=False)
     #est_rejete = models.BooleanField(default=False)
     commentaire_rejet = models.TextField(blank=True, null=True)
+    motif_rejet = models.TextField(blank=True, null=True)
+
     date_validation = models.DateTimeField(null=True, blank=True)
     competences_comportementales = models.TextField(blank=True, null=True)
     taux_avancement = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)

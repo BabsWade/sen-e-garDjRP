@@ -182,6 +182,7 @@ const App: React.FC = () => {
 
         {/* Détail d’un objectif spécifique (ObjectifSubordonnees) */}
         <Route path="/objectifs-superieur/:objectifId" element={<ObjectifSubordonnees />} />
+        <Route path="/objectifs/:id" element={<ObjectifDetails />} />
 
       </Routes>
     </div>

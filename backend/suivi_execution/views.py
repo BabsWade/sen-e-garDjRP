@@ -116,4 +116,3 @@ class RealisationUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Realisation.objects.all()
     serializer_class = RealisationSerializer
     permission_classes = [permissions.IsAuthenticated]
-

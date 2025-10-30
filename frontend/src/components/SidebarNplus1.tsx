@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, handleDrawerToggle }) => 
         </ListItemButton>
         <Collapse in={openMoi} timeout="auto" unmountOnExit>
           <List component="div" disablePadding sx={{ pl: 4 }}>
-            <ListItemButton component={Link} to="/dashboard" selected={location.pathname === '/dashboard'}>
+            <ListItemButton component={Link} to="/agent-dashboard" selected={location.pathname === '/agent-dashboard'}>
               <ListItemIcon><DashboardIcon /></ListItemIcon>
               <ListItemText primary="Dashboard" />
             </ListItemButton>

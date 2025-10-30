@@ -1,141 +1,194 @@
-import React, { useEffect, useState } from "react";
-import api from "../api";
+// src/pages/ObjectifDetailsNplus1.tsx
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
+  Box,
   Card,
   CardContent,
-  CardHeader,
   Typography,
-  CircularProgress,
-  Box,
   Button,
-  Grid,
+  CircularProgress,
+  Divider,
   Chip,
-} from "@mui/material";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import { Link, useNavigate } from "react-router-dom";
-import AddIcon from '@mui/icons-material/Add';
+  LinearProgress
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SidebarNplus1 from '../components/SidebarNplus1';
+import Topbar from '../components/Topbar';
+import api from '../api';
+
 interface Objectif {
   id: number;
   libelle: string;
-  agent_nom_complet: string;
-  service_nom: string;
-  periode_nom: string;
+  type_kpi: string;
+  cible: number;
   poids: number;
   taux_avancement: number;
-  statut: string;
-  date_creation: string;
+  date_debut: string;
+  date_delai: string;
+  statut: 'en_attente' | 'valide' | 'rejete';
+  commentaire_rejet?: string;
 }
 
-const ObjectifsListNplus1: React.FC = () => {
-  const [objectifs, setObjectifs] = useState<Objectif[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface Realisation {
+  id: number;
+  description: string;
+  taux_avancement: number;
+  preuve?: string;
+  est_valide: boolean;
+  est_rejete: boolean;
+  commentaire_rejet?: string;
+}
+
+const drawerWidth = 300;
+
+const ObjectifDetailsNplus1: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [objectif, setObjectif] = useState<Objectif | null>(null);
+  const [realisations, setRealisations] = useState<Realisation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
   useEffect(() => {
-    const fetchObjectifs = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get("/objectifs/");
-        setObjectifs(response.data);
-      } catch (err) {
-        console.error(err);
-        setError("Erreur lors du chargement des objectifs.");
+        const resp = await api.get(`/objectifs/${id}/`);
+        setObjectif(resp.data);
+
+        const respRealisations = await api.get(`/objectifs/${id}/realisations/`);
+        setRealisations(respRealisations.data);
+      } catch (error) {
+        console.error('Erreur chargement détails objectif N+1 :', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchObjectifs();
-  }, []);
+    fetchData();
+  }, [id]);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  if (loading) return (
+    <Box sx={{ textAlign: 'center', mt: 10 }}>
+      <CircularProgress />
+      <Typography sx={{ mt: 2 }}>Chargement...</Typography>
+    </Box>
+  );
 
-  if (error) {
-    return (
-      <Box textAlign="center" mt={5}>
-        <Typography color="error">{error}</Typography>
-      </Box>
-    );
-  }
+  if (!objectif) return <Typography>Aucun objectif trouvé.</Typography>;
+
+  const statutLabels: Record<string, string> = {
+    en_attente: '⏳ En attente',
+    valide: '✅ Validé',
+    rejete: '❌ Rejeté',
+  };
+
+  const statutCouleurs: Record<string, string> = {
+    en_attente: '#fbc02d',
+    valide: '#4caf50',
+    rejete: '#e53935',
+  };
 
   return (
-    <Box p={4}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" fontWeight="bold">
-          🎯 Objectifs créés par vous (Responsable N+1)
-        </Typography>
-        <Button
-              component={Link}
-              to="/objectifs/create"
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={{
-                bgcolor: '#1976d2',
-                '&:hover': { bgcolor: '#115293' },
-                borderRadius: 2,
-              }}
-            >
-              Créer un objectif
-            </Button>
-      </Box>
+    <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      <SidebarNplus1 mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, width: { md: `calc(100% - ${drawerWidth}px)` }, display: 'flex', flexDirection: 'column' }}
+      >
+        <Topbar title="Détails de l'objectif" handleDrawerToggle={handleDrawerToggle} />
+        <Box sx={{ p: 3, mt: { xs: '56px', md: '64px' } }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2 }}>
+            Retour
+          </Button>
 
-      {objectifs.length === 0 ? (
-        <Typography>Aucun objectif créé pour le moment.</Typography>
-      ) : (
-        <Grid container spacing={3}>
-          {objectifs.map((obj) => (
-            <Grid item xs={12} sm={6} md={4} key={obj.id}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  boxShadow: 3,
-                  transition: "0.3s",
-                  "&:hover": { transform: "scale(1.02)", boxShadow: 6 },
-                }}
-              >
-                <CardHeader
-                  title={obj.libelle}
-                  subheader={`Agent : ${obj.agent_nom_complet}`}
+          <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', p: 2 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                🎯 {objectif.libelle}
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Type KPI :</strong> {objectif.type_kpi}
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Cible :</strong> {objectif.cible}
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Poids :</strong> {objectif.poids}%
+              </Typography>
+
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2">Taux d’avancement : {objectif.taux_avancement}%</Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={objectif.taux_avancement}
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    mt: 0.5,
+                    backgroundColor: '#e0e0e0',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor:
+                        objectif.taux_avancement < 50
+                          ? '#fbc02d'
+                          : objectif.taux_avancement < 100
+                          ? '#1976d2'
+                          : '#4caf50',
+                    },
+                  }}
                 />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
-                    Service : {obj.service_nom || "—"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Période : {obj.periode_nom || "—"}
-                  </Typography>
-                  <Typography variant="body2" mt={1}>
-                    Poids : <strong>{obj.poids}%</strong>
-                  </Typography>
+              </Box>
+
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Date de début :</strong> {objectif.date_debut}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Date limite :</strong> {objectif.date_delai}
+              </Typography>
+
+              <Chip
+                label={statutLabels[objectif.statut]}
+                sx={{ mt: 2, bgcolor: statutCouleurs[objectif.statut], color: 'white', fontWeight: 'bold' }}
+              />
+              {objectif.statut === 'rejete' && objectif.commentaire_rejet && (
+                <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                  💬 Commentaire : {objectif.commentaire_rejet}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Réalisations liées à cet objectif</Typography>
+          {realisations.length === 0 ? (
+            <Typography color="text.secondary">Aucune réalisation trouvée pour cet objectif.</Typography>
+          ) : (
+            realisations.map((r) => (
+              <Card key={r.id} sx={{ mb: 2, borderRadius: 2, p: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
+                <Typography variant="body1" sx={{ mb: 1 }}><strong>Description :</strong> {r.description}</Typography>
+                {r.preuve && (
                   <Typography variant="body2">
-                    Taux d’avancement : <strong>{obj.taux_avancement}%</strong>
+                    <strong>Preuve :</strong>{' '}
+                    <a href={r.preuve} target="_blank" rel="noopener noreferrer">Voir le document</a>
                   </Typography>
-                  <Box mt={2}>
-                    <Chip
-                      label={obj.statut}
-                      color={
-                        obj.statut === "valide"
-                          ? "success"
-                          : obj.statut === "rejete"
-                          ? "error"
-                          : "warning"
-                      }
-                      variant="outlined"
-                    />
-                  </Box>
-                </CardContent>
+                )}
+                <Chip
+                  label={r.est_valide ? 'Validée ✅' : r.est_rejete ? 'Rejetée ❌' : 'En attente ⏳'}
+                  sx={{
+                    mt: 2,
+                    bgcolor: r.est_valide ? '#4caf50' : r.est_rejete ? '#e53935' : '#fbc02d',
+                    color: 'white',
+                    fontWeight: 'bold',
+                  }}
+                />
               </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+            ))
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 };
 
-export default ObjectifsListNplus1;
+export default ObjectifDetailsNplus1;

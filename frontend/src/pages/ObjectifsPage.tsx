@@ -236,22 +236,22 @@ const ObjectifsPage: React.FC = () => {
 
                       {/* --- Boutons d’action --- */}
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                        {objectif.statut === 'en_attente' && (
-                          <Button
-                            component={Link}
-                            to={`/objectifs/${objectif.id}/edit`}
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            sx={{
-                              borderColor: '#1976d2',
-                              color: '#1976d2',
-                              '&:hover': { bgcolor: '#e3f2fd' },
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Modifier
-                          </Button>
-                        )}
+                      {(objectif.statut === 'en_attente' || objectif.statut === 'rejete') && (
+  <Button
+    component={Link}
+    to={`/objectifs/${objectif.id}/edit`}
+    variant="outlined"
+    startIcon={<EditIcon />}
+    sx={{
+      borderColor: '#1976d2',
+      color: '#1976d2',
+      '&:hover': { bgcolor: '#e3f2fd' },
+    }}
+    onClick={(e) => e.stopPropagation()}
+  >
+    Modifier
+  </Button>
+)}
 
                         <Button
                           variant="text"

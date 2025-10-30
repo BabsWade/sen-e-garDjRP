@@ -1,6 +1,6 @@
 // src/pages/ObjectifSubordonnees.tsx
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -27,10 +27,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import Sidebar from '../components/Sidebar';
+import SidebarNplus1 from '../components/SidebarNplus1';
 import Topbar from '../components/Topbar';
 import api from '../api';
-import SidebarNplus1 from '../components/SidebarNplus1';
 
 interface Realisation {
   id: number;
@@ -65,12 +64,12 @@ interface Agent {
   service_nom: string;
   responsable_nom: string;
   superieur_hierarchique: boolean;
+  responsable_id: number;
 }
 
 interface ApiResponse {
   agent: Agent;
   objectif: Objectif;
-  peutAgir?: boolean;
 }
 
 const drawerWidth = 300;
@@ -85,9 +84,11 @@ const ObjectifSubordonnees: React.FC = () => {
   const [openRejetDialog, setOpenRejetDialog] = useState(false);
   const [commentaire, setCommentaire] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const [openModifierDialog, setOpenModifierDialog] = useState(false);
   const [nouveauLibelle, setNouveauLibelle] = useState('');
   const [nouvelleCible, setNouvelleCible] = useState<number | ''>('');
+
   const [openValiderDialog, setOpenValiderDialog] = useState(false);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
@@ -121,9 +122,10 @@ const ObjectifSubordonnees: React.FC = () => {
 
   const { agent, objectif } = data;
 
+  // === Vérification des permissions : seul le DRH ou le responsable (N+1) peut agir ===
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const peutAgir =
-    objectif.statut === 'en_attente' &&
+    currentUser &&
     (currentUser.role === 'DRH' || currentUser.id === agent.responsable_id);
 
   const statutLabels: Record<string, string> = {
@@ -138,7 +140,6 @@ const ObjectifSubordonnees: React.FC = () => {
     rejete: '#e53935',
   };
 
-  // === UI Modernisé ===
   const cardStyle = {
     borderRadius: 3,
     p: 3,
@@ -147,6 +148,47 @@ const ObjectifSubordonnees: React.FC = () => {
     background: 'linear-gradient(145deg, #ffffff, #f5f7fa)',
     transition: 'transform 0.25s ease, box-shadow 0.25s ease',
     '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 28px rgba(0,0,0,0.1)' },
+  };
+
+  // === Handlers ===
+  const handleValider = async () => {
+    try {
+      await api.post(`/objectifs-superieur/${objectif.id}/valider/`);
+      setMessage({ type: 'success', text: 'Objectif validé ✅' });
+      setOpenValiderDialog(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors de la validation ❌' });
+    }
+  };
+
+  const handleRejeter = async () => {
+    try {
+      await api.post(`/objectifs-superieur/${objectif.id}/rejeter/`, { commentaire_rejet: commentaire });
+      setMessage({ type: 'success', text: 'Objectif rejeté ❌' });
+      setOpenRejetDialog(false);
+      setCommentaire('');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors du rejet' });
+    }
+  };
+
+  const handleModifier = async () => {
+    try {
+      await api.put(`/objectifs-superieur/${objectif.id}/modifier/`, {
+        libelle: nouveauLibelle,
+        cible: nouvelleCible,
+      });
+      setMessage({ type: 'success', text: 'Objectif modifié ✏️' });
+      setOpenModifierDialog(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Erreur lors de la modification' });
+    }
   };
 
   return (
@@ -196,9 +238,7 @@ const ObjectifSubordonnees: React.FC = () => {
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
                     Matricule : {agent.matricule} • Service : {agent.service_nom}
                   </Typography>
-                  <Typography color="text.secondary">
-                    Responsable : {agent.responsable_nom}
-                  </Typography>
+                  <Typography color="text.secondary">Responsable : {agent.responsable_nom}</Typography>
                 </Box>
               </CardContent>
             </Card>
@@ -241,8 +281,8 @@ const ObjectifSubordonnees: React.FC = () => {
                             objectif.taux_avancement === 100
                               ? '#43a047'
                               : objectif.taux_avancement >= 50
-                                ? '#1976d2'
-                                : '#fbc02d',
+                              ? '#1976d2'
+                              : '#fbc02d',
                         },
                       }}
                     />
@@ -262,52 +302,47 @@ const ObjectifSubordonnees: React.FC = () => {
                 />
 
                 {/* Boutons d’action */}
-                <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
-                  {peutAgir && (
-                    <>
-                      <Tooltip title="Valider">
-                        <Button
-                          startIcon={<CheckCircleOutlineIcon />}
-                          variant="contained"
-                          color="success"
-                          onClick={() => setOpenValiderDialog(true)}
-                          sx={{ borderRadius: 2, px: 2 }}
-                        >
-                          Valider
-                        </Button>
-                      </Tooltip>
-                      <Tooltip title="Rejeter">
-                        <Button
-                          startIcon={<CancelOutlinedIcon />}
-                          variant="outlined"
-                          color="error"
-                          onClick={() => setOpenRejetDialog(true)}
-                          sx={{ borderRadius: 2, px: 2 }}
-                        >
-                          Rejeter
-                        </Button>
-                      </Tooltip>
-                    </>
-                  )}
-                  <Tooltip title="Modifier cet objectif">
-                    <Button
-                      startIcon={<EditOutlinedIcon />}
-                      variant="text"
-                      color="primary"
-                      onClick={() => {
-                        setNouveauLibelle(objectif.libelle);
-                        setNouvelleCible(objectif.cible);
-                        setOpenModifierDialog(true);
-                      }}
-                      sx={{
-                        fontWeight: 600,
-                        '&:hover': { textDecoration: 'underline' },
-                      }}
-                    >
-                      Modifier
-                    </Button>
-                  </Tooltip>
-                </Stack>
+                {peutAgir && (
+                  <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+                    <Tooltip title="Valider">
+                      <Button
+                        startIcon={<CheckCircleOutlineIcon />}
+                        variant="contained"
+                        color="success"
+                        onClick={() => setOpenValiderDialog(true)}
+                        sx={{ borderRadius: 2, px: 2 }}
+                      >
+                        Valider
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Rejeter">
+                      <Button
+                        startIcon={<CancelOutlinedIcon />}
+                        variant="outlined"
+                        color="error"
+                        onClick={() => setOpenRejetDialog(true)}
+                        sx={{ borderRadius: 2, px: 2 }}
+                      >
+                        Rejeter
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Modifier cet objectif">
+                      <Button
+                        startIcon={<EditOutlinedIcon />}
+                        variant="text"
+                        color="primary"
+                        onClick={() => {
+                          setNouveauLibelle(objectif.libelle);
+                          setNouvelleCible(objectif.cible);
+                          setOpenModifierDialog(true);
+                        }}
+                        sx={{ fontWeight: 600, '&:hover': { textDecoration: 'underline' } }}
+                      >
+                        Modifier
+                      </Button>
+                    </Tooltip>
+                  </Stack>
+                )}
               </CardContent>
             </Card>
           </Fade>
@@ -318,9 +353,7 @@ const ObjectifSubordonnees: React.FC = () => {
           </Typography>
 
           {objectif.realisations.length === 0 ? (
-            <Typography color="text.secondary">
-              Aucune réalisation trouvée pour cet objectif.
-            </Typography>
+            <Typography color="text.secondary">Aucune réalisation trouvée pour cet objectif.</Typography>
           ) : (
             objectif.realisations.map((r) => (
               <Fade in key={r.id}>
@@ -350,19 +383,11 @@ const ObjectifSubordonnees: React.FC = () => {
                   )}
                   <Chip
                     label={
-                      r.est_valide
-                        ? 'Validée ✅'
-                        : r.est_rejete
-                          ? 'Rejetée ❌'
-                          : 'En attente ⏳'
+                      r.est_valide ? 'Validée ✅' : r.est_rejete ? 'Rejetée ❌' : 'En attente ⏳'
                     }
                     sx={{
                       mt: 2,
-                      bgcolor: r.est_valide
-                        ? '#4caf50'
-                        : r.est_rejete
-                          ? '#e53935'
-                          : '#fbc02d',
+                      bgcolor: r.est_valide ? '#4caf50' : r.est_rejete ? '#e53935' : '#fbc02d',
                       color: 'white',
                       fontWeight: 'bold',
                     }}
@@ -372,7 +397,6 @@ const ObjectifSubordonnees: React.FC = () => {
             ))
           )}
 
-          {/* Dialogs et Snackbar inchangés */}
           {/* === Dialogs === */}
           <Dialog open={openRejetDialog} onClose={() => setOpenRejetDialog(false)}>
             <DialogTitle>Rejeter l’objectif</DialogTitle>
@@ -388,7 +412,7 @@ const ObjectifSubordonnees: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenRejetDialog(false)}>Annuler</Button>
-              <Button variant="contained" color="error" onClick={() => { }}>
+              <Button variant="contained" color="error" onClick={handleRejeter}>
                 Confirmer le rejet
               </Button>
             </DialogActions>
@@ -413,7 +437,7 @@ const ObjectifSubordonnees: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenModifierDialog(false)}>Annuler</Button>
-              <Button variant="contained" color="primary" onClick={() => { }}>
+              <Button variant="contained" color="primary" onClick={handleModifier}>
                 Enregistrer
               </Button>
             </DialogActions>
@@ -434,7 +458,7 @@ const ObjectifSubordonnees: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenValiderDialog(false)}>Annuler</Button>
-              <Button variant="contained" color="primary" onClick={() => { }}>
+              <Button variant="contained" color="primary" onClick={handleValider}>
                 Confirmer
               </Button>
             </DialogActions>
