@@ -1,3 +1,4 @@
+from django.db.models.functions import Coalesce
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -22,7 +23,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Prefetch
+from django.db.models import Prefetch, FloatField
+from django.db.models import Sum, Q, F, Count
 
 from planification_alignement.models import Objectif
 from planification_alignement.serializers import ObjectifSerializer
@@ -143,7 +145,6 @@ class AgentFeedbacksAPIView(APIView):
 
 # 3) Historique des performances de l'agent
 
-
 class AgentHistoriquePerformanceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -152,35 +153,38 @@ class AgentHistoriquePerformanceAPIView(APIView):
         historiques = HistoriquePerformance.objects.filter(agent=agent).order_by('date_calcul')
 
         data = []
-        dernier_taux = None  # pour détecter les variations
+        dernier_taux = None
         derniere_perf = None
 
         for h in historiques:
-            # Objectifs actifs à cette date
-            objectifs = Objectif.objects.filter(agent=agent, date_debut__lte=h.date_calcul)
+            # 1️⃣ Objectifs valides dont la date_debut est <= date_calcul ou NULL
+            objectifs_valides = Objectif.objects.filter(
+                agent=agent,
+                statut='valide'
+            ).filter(
+                Q(date_debut__lte=h.date_calcul) | Q(date_debut__isnull=True)
+            )
 
-            total_cible = 0
-            total_realise = 0
+            # Somme des cibles (0 si NULL)
+            total_cible = objectifs_valides.aggregate(
+                total=Coalesce(Sum('cible', output_field=FloatField()), 0.0)
+            )['total']
 
-            for obj in objectifs:
-                # Réalisations validées jusqu'à cette date
-                realisations_valides = Realisation.objects.filter(
-                    objectif=obj,
-                    est_valide=True,
-                    date_validation__lte=h.date_calcul
-                ).count()
+            # 2️⃣ Somme des réalisations validées jusqu'à la date de calcul
+            objectifs_ids = objectifs_valides.values_list('id', flat=True)
+            total_realise = Realisation.objects.filter(
+                objectif_id__in=objectifs_ids,
+                est_valide=True,
+                date_validation__lte=h.date_calcul
+            ).aggregate(
+                total=Coalesce(Sum('valeur', output_field=FloatField()), 0.0)
+            )['total']
 
-                total_realise += realisations_valides
-                total_cible += getattr(obj, 'cible', 0) or 0
-
+            # 3️⃣ Calcul du taux
             taux_realisations_valides = round((total_realise / total_cible) * 100, 2) if total_cible else 0
 
             # Ajoute un point uniquement si le taux ou la performance a changé
-            if (
-                not data  # premier point
-                or taux_realisations_valides != dernier_taux
-                or float(h.performance) != derniere_perf
-            ):
+            if not data or taux_realisations_valides != dernier_taux or float(h.performance) != derniere_perf:
                 data.append({
                     "date_calcul": h.date_calcul,
                     "performance": float(h.performance),

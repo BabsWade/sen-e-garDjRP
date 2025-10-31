@@ -68,7 +68,9 @@ const AgentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [showAllObjectifs, setShowAllObjectifs] = useState(false);
   const [showAllNotifs, setShowAllNotifs] = useState(false);
-
+  const historiqueTrie = [...historique].sort(
+    (a, b) => new Date(a.date_calcul) - new Date(b.date_calcul)
+  );
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
   const handleVoirDetails = (id: number) => {
@@ -78,14 +80,17 @@ const AgentDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
+        // Récupération des infos principales
         const perfResp = await api.get('/dashboard-agent/');
         const data = perfResp.data;
+
         setAgent(data);
         setPerformance(Number(data.performance_moyenne) || 0);
         setPeriodeEnCours(data.periode_en_cours || 'Aucune');
         setObjectifsAtteints(data.objectifs_atteints || 0);
         setTotalObjectifs(data.total_objectifs || 0);
 
+        // On récupère les autres données
         const [objRes, notifRes, fbRes, histRes, noteRes] = await Promise.all([
           api.get('/agent-objectifs/'),
           api.get('/notifications/'),
@@ -98,13 +103,21 @@ const AgentDashboard: React.FC = () => {
         setNotifications(notifRes.data);
         setFeedbacks(fbRes.data);
         setHistorique(histRes.data);
+
         if (noteRes.data && noteRes.data.length > 0) setNoteFinale(noteRes.data[0]);
+
       } catch (err) {
         console.error(err);
       }
     };
+
     fetchDashboardData();
   }, []);
+  console.table(historique.map(h => ({
+    date: h.date_calcul,
+    taux: h.taux_realisations_valides
+  })))
+
 
   return (
     <Box sx={{ display: 'flex', bgcolor: '#f6f8fc', minHeight: '100vh' }}>
@@ -164,6 +177,7 @@ const AgentDashboard: React.FC = () => {
                 </Typography>
                 <Line
                   data={{
+
                     labels: historique.map((h) => new Date(h.date_calcul).toLocaleDateString()),
                     datasets: [
                       {
@@ -176,7 +190,8 @@ const AgentDashboard: React.FC = () => {
                       },
                       {
                         label: 'Taux de réalisations validées (%)',
-                        data: historique.map((h) => h.taux_realisations_valides),
+                        // On utilise directement le taux actuel de l'agent pour chaque point
+                        data: historique.map(() => agent?.taux_realisations_valides || 0),
                         borderColor: '#ff9800',
                         backgroundColor: 'rgba(255, 152, 0, 0.2)',
                         tension: 0.3,
@@ -209,6 +224,7 @@ const AgentDashboard: React.FC = () => {
                     },
                   }}
                 />
+
               </CardContent>
             </Card>
           </Grid>
@@ -224,7 +240,7 @@ const AgentDashboard: React.FC = () => {
                 ) : (
                   <List>
 
-                    {notifications.slice(0, showAllNotifs ? notifications.length : 5).map((notif) => (
+                    {notifications.slice(0, showAllNotifs ? notifications.length : 4).map((notif) => (
                       <React.Fragment key={notif.id}>
                         <ListItem>
                           <ListItemText

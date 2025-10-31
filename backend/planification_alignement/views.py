@@ -9,7 +9,8 @@ from .serializers import (
     PeriodeSerializer,
     ServiceSerializer,
     ObjectifSerializer,
-    IndicateurSerializer, PlanStrategiqueSerializer, ObjectifProgrammeSerializer, ObjectifSuperieurSerializer
+    IndicateurSerializer, PlanStrategiqueSerializer, ObjectifProgrammeSerializer, ObjectifSuperieurSerializer,
+    HistoriquePerformanceSerializer
 )
 from .models import Objectif
 from accounts.models import Agent
@@ -235,6 +236,8 @@ class PerformanceAPIView(APIView):
             **serializer.data,
             "historique": historique
         })
+
+
 class AgentDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -273,6 +276,30 @@ class AgentDashboardView(APIView):
             "periode_en_cours": periode_nom,
 
         })
+
+
+# planification_alignement/views.py
+
+
+class DashboardAgentView(APIView):
+    """
+    Endpoint pour récupérer la liste des agents avec leur performance et taux de réalisations validées.
+    """
+    def get(self, request, *args, **kwargs):
+        # Récupérer tous les agents
+        agents = Agent.objects.all()
+
+        # Sérialiser les données
+        serializer = AgentPerformanceSerializer(agents, many=True)
+
+        # Renvoyer la réponse
+        return Response({
+            "agents": serializer.data
+        })
+
+
+
+
 
 class AgentsSousResponsableViewSet(viewsets.ViewSet):
     """
@@ -710,3 +737,15 @@ class ModifierRealisationView(generics.UpdateAPIView):
         realisation.description = description
         realisation.save()
         return Response({'message': 'Réalisation modifiée avec succès'}, status=status.HTTP_200_OK)
+
+
+
+
+class HistoriquePerformancesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent = request.user
+        historique = HistoriquePerformance.objects.filter(agent=agent).order_by('date_calcul')
+        serializer = HistoriquePerformanceSerializer(historique, many=True)
+        return Response(serializer.data)

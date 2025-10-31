@@ -101,12 +101,16 @@ class ObjectifSerializer(serializers.ModelSerializer):
         """Retourne True si l’objectif est rejeté."""
         return obj.statut == 'rejete'
 
-
 class AgentPerformanceSerializer(serializers.ModelSerializer):
-    service_nom = serializers.CharField(source='service.nom_service', read_only=True,  required=False,
-        allow_null=True)
+    service_nom = serializers.CharField(
+        source='service.nom_service',
+        read_only=True,
+        required=False,
+        allow_null=True
+    )
     responsable_nom = serializers.SerializerMethodField()
     performance_moyenne = serializers.SerializerMethodField()
+    taux_realisations_valides = serializers.SerializerMethodField()  # 🟢 Nouveau champ
 
     class Meta:
         model = Agent
@@ -119,21 +123,26 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             'service_nom',
             'responsable_nom',
             'superieur_hierarchique',
+            'taux_realisations_valides',  # 🟢 Inclure le champ dans l'API
         ]
 
     def get_responsable_nom(self, obj):
-        """
-        Retourne le nom complet du responsable hiérarchique s’il existe.
-        """
         if obj.responsable:
             return f"{obj.responsable.nom} {obj.responsable.prenom}"
         return "Non défini"
 
     def get_performance_moyenne(self, obj):
-        """
-        Retourne la performance pondérée comme un nombre.
-        """
         return float(obj.performance_moyenne)
+
+    def get_taux_realisations_valides(self, obj):
+        """
+        Calcule le taux de réalisations validées pour l'agent.
+        """
+        realisations_qs = obj.realisations.all()  # ✅ Utilisation du related_name
+        total = realisations_qs.count()
+        valides = realisations_qs.filter(est_valide=True).count()
+        taux = (valides / total) * 100 if total else 0
+        return round(taux, 2)  # on peut arrondir à 2 décimales
 
 class AgentSousResponsableSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True)
@@ -143,10 +152,24 @@ class AgentSousResponsableSerializer(serializers.ModelSerializer):
         fields = ['id', 'matricule', 'nom', 'prenom', 'service_nom', 'performance_moyenne', 'etat_agent']
 
 
+
 class HistoriquePerformanceSerializer(serializers.ModelSerializer):
+    taux_realisations_valides = serializers.SerializerMethodField()
+
     class Meta:
         model = HistoriquePerformance
-        fields = ['id', 'agent', 'performance', 'date_calcul']
+        fields = ['date_calcul', 'performance', 'taux_realisations_valides']
+
+    def get_taux_realisations_valides(self, obj):
+        agent = obj.agent
+        # On récupère les réalisations jusqu'à la date du calcul
+        realisations = agent.realisations.filter(date_soumission__lte=obj.date_calcul)
+        total = realisations.count()
+        valides = realisations.filter(est_valide=True).count()
+        taux = (valides / total) * 100 if total else 0
+        return round(taux, 2)
+
+
 
 class ObjectifSuperieurSerializer(serializers.ModelSerializer):
     realisations = RealisationSerializer(many=True, read_only=True)
@@ -167,3 +190,4 @@ class ObjectifSuperieurSerializer(serializers.ModelSerializer):
             'service_nom': agent.service.nom,
             'email': agent.email,
         }
+

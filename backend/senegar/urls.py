@@ -51,5 +51,6 @@ path("agent-objectifs/<int:pk>/realisations/", ObjectifRealisationsAPIView.as_vi
     path('api/agent-historique-performances/', AgentHistoriquePerformanceAPIView.as_view(), name='agent-historique-root'),
     path('agent-notifications/', views.agent_notifications, name='agent-notifications'),
     path('agent-details/<int:agent_id>/', AgentDetailAPIView.as_view(), name='agent-details'),
+    path('api/suivi_execution/', include('suivi_execution.urls')),  # ✅ nouvelle API
 
 ]

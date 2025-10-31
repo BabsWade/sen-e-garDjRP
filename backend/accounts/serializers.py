@@ -58,10 +58,19 @@ class AgentRegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+from rest_framework import serializers
+from accounts.models import Agent
+
 class AgentPerformanceSerializer(serializers.ModelSerializer):
-    service_nom = serializers.CharField(source='service.nom_service', read_only=True)
+    service_nom = serializers.CharField(
+        source='service.nom_service',
+        read_only=True,
+        required=False,
+        allow_null=True
+    )
     responsable_nom = serializers.SerializerMethodField()
-    taux_realisations_valides = serializers.SerializerMethodField()
+    performance_moyenne = serializers.SerializerMethodField()
+    taux_realisations_valides = serializers.SerializerMethodField()  # 🟢 Nouveau champ
 
     class Meta:
         model = Agent
@@ -73,38 +82,29 @@ class AgentPerformanceSerializer(serializers.ModelSerializer):
             'performance_moyenne',
             'service_nom',
             'responsable_nom',
-            'taux_realisations_valides',
             'superieur_hierarchique',
+            'taux_realisations_valides',  # 🟢 Inclure le champ dans l'API
         ]
-        read_only_fields = ['performance_moyenne']
 
     def get_responsable_nom(self, obj):
-        """Retourne le nom complet du responsable hiérarchique s’il existe."""
         if obj.responsable:
             return f"{obj.responsable.nom} {obj.responsable.prenom}"
         return "Non défini"
 
+    def get_performance_moyenne(self, obj):
+        return float(obj.performance_moyenne)
+
     def get_taux_realisations_valides(self, obj):
         """
-        Calcule le taux de réalisations validées de l'agent
-        en se basant sur les réalisations validées de ses objectifs
-        et la somme des cibles de ces objectifs.
+        Calcule le taux de réalisations validées pour l'agent.
         """
-        objectifs = obj.objectifs_planification.all()
-        if not objectifs.exists():
-            return 0.0
+        realisations_qs = obj.realisations.all()  # ✅ Utilisation du related_name
+        total = realisations_qs.count()
+        valides = realisations_qs.filter(est_valide=True).count()
+        taux = (valides / total) * 100 if total else 0
+        return round(taux, 2)  # on peut arrondir à 2 décimales
 
-        total_cibles = sum(objo.cible or 0 for objo in objectifs)
-        if total_cibles == 0:
-            return 0.0
 
-        total_realisations_valides = sum(
-            objo.realisations.filter(est_valide=True).count()
-            for objo in objectifs
-        )
-
-        taux = (total_realisations_valides / total_cibles) * 100
-        return round(taux, 2)
 
 class AgentSousResponsableSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True)

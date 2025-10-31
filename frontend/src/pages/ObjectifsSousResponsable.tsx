@@ -31,6 +31,14 @@ const ObjectifsSousResponsable: React.FC = () => {
     poids: '',
     type_kpi: '',
   });
+
+  // 🔹 Nouveaux états pour la logique de création (depuis CreateObjectifPage)
+  const [periodes, setPeriodes] = useState<any[]>([]);
+  const [indicateurs, setIndicateurs] = useState<any[]>([]);
+  const [periode, setPeriode] = useState('');
+  const [indicateur, setIndicateur] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const [searchAgent, setSearchAgent] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
@@ -45,6 +53,7 @@ const ObjectifsSousResponsable: React.FC = () => {
   const [nouvelleCible, setNouvelleCible] = useState<number | ''>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // === Fetch data ===
   const fetchData = async () => {
     const res = await api.get('/objectifs-sous-responsable/');
     setObjectifs(res.data);
@@ -58,30 +67,72 @@ const ObjectifsSousResponsable: React.FC = () => {
   useEffect(() => {
     fetchData();
     fetchAgents();
+
+    const fetchPeriodes = async () => {
+      try {
+        const res = await api.get('/periodes/');
+        setPeriodes(res.data);
+      } catch (error) {
+        console.error('Erreur chargement périodes', error);
+      }
+    };
+
+    const fetchIndicateurs = async () => {
+      try {
+        const res = await api.get('/indicateurs/');
+        setIndicateurs(res.data);
+      } catch (error) {
+        console.error('Erreur chargement indicateurs', error);
+      }
+    };
+
+    fetchPeriodes();
+    fetchIndicateurs();
   }, []);
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // === Logique fusionnée de création d'objectif ===
   const handleSubmit = async () => {
+    if (!form.agent || !form.libelle || !form.type_kpi || !form.cible || !form.poids || !periode) {
+      setMessage({ type: 'error', text: 'Veuillez remplir tous les champs obligatoires.' });
+      return;
+    }
+
+    setLoading(true);
+
+    const payload: any = {
+      agent: form.agent,
+      libelle: form.libelle,
+      type_kpi: form.type_kpi,
+      cible: Number(form.cible),
+      poids: parseFloat(form.poids),
+      periode,
+    };
+
+    if (indicateur) {
+      payload.indicateur = indicateur;
+    }
+
     try {
-      await api.post('/objectifs-sous-responsable/', {
-        ...form,
-        cible: Number(form.cible),
-        poids: Number(form.poids),
-      });
+      await api.post('/objectifs-sous-responsable/', payload);
       setOpen(false);
       setForm({ agent: '', libelle: '', cible: '', poids: '', type_kpi: '' });
+      setPeriode('');
+      setIndicateur('');
       fetchData();
-      setMessage({ type: 'success', text: 'Objectif créé ✅' });
+      setMessage({ type: 'success', text: 'Objectif créé avec succès ✅' });
     } catch (error) {
       console.error(error);
-      setMessage({ type: 'error', text: 'Erreur lors de la création' });
+      setMessage({ type: 'error', text: 'Erreur lors de la création de l’objectif.' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // === Handlers pour les dialogs ===
+  // === Handlers pour les autres dialogs ===
   const openDialogRejet = (id: number) => {
     setSelectedId(id);
     setCommentaire('');
@@ -244,6 +295,7 @@ const ObjectifsSousResponsable: React.FC = () => {
                 value={form.agent}
                 onChange={handleChange}
                 fullWidth
+                required
               >
                 {agents.map((a) => (
                   <MenuItem key={a.id} value={a.id}>
@@ -252,15 +304,42 @@ const ObjectifsSousResponsable: React.FC = () => {
                 ))}
               </TextField>
             </Grid>
+
             <Grid item xs={12}>
-              <TextField label="Libellé" name="libelle" value={form.libelle} onChange={handleChange} fullWidth />
+              <TextField
+                label="Libellé"
+                name="libelle"
+                value={form.libelle}
+                onChange={handleChange}
+                fullWidth
+                required
+              />
             </Grid>
+
             <Grid item xs={6}>
-              <TextField label="Cible" name="cible" value={form.cible} onChange={handleChange} fullWidth />
+              <TextField
+                label="Cible"
+                name="cible"
+                type="number"
+                value={form.cible}
+                onChange={handleChange}
+                fullWidth
+                required
+              />
             </Grid>
+
             <Grid item xs={6}>
-              <TextField label="Poids" name="poids" value={form.poids} onChange={handleChange} fullWidth />
+              <TextField
+                label="Poids"
+                name="poids"
+                type="number"
+                value={form.poids}
+                onChange={handleChange}
+                fullWidth
+                required
+              />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 select
@@ -269,18 +348,55 @@ const ObjectifsSousResponsable: React.FC = () => {
                 value={form.type_kpi}
                 onChange={handleChange}
                 fullWidth
+                required
               >
-                <MenuItem value="Quantité">Quantité</MenuItem>
-                <MenuItem value="Qualité">Qualité</MenuItem>
+                <MenuItem value="Quantitatif">Quantitatif</MenuItem>
+                <MenuItem value="Qualitatif">Qualitatif</MenuItem>
                 <MenuItem value="Délai">Délai</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                select
+                label="Période"
+                fullWidth
+                required
+                value={periode}
+                onChange={(e) => setPeriode(e.target.value)}
+              >
+                {periodes.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.libelle_periode}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                select
+                label="Indicateur stratégique"
+                fullWidth
+                value={indicateur}
+                onChange={(e) => setIndicateur(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>-- Aucun indicateur --</em>
+                </MenuItem>
+                {indicateurs.map((ind) => (
+                  <MenuItem key={ind.id} value={ind.id.toString()}>
+                    {ind.libelle}
+                  </MenuItem>
+                ))}
               </TextField>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Annuler</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            Créer
+          <Button onClick={handleSubmit} variant="contained" color="primary" disabled={loading}>
+            {loading ? 'Création...' : 'Créer'}
           </Button>
         </DialogActions>
       </Dialog>
