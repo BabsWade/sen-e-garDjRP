@@ -6,7 +6,6 @@ import {
   TextField,
   Typography,
   Grid,
-  Select,
   Paper,
   MenuItem,
   CircularProgress,
@@ -21,6 +20,7 @@ interface PeriodeOption {
   libelle_periode: string;
   date_debut: string;
   date_fin: string;
+  statut_periode: string;
 }
 
 interface IndicateurOption {
@@ -39,7 +39,7 @@ const CreateObjectifPage: React.FC = () => {
   const [periode, setPeriode] = useState('');
   const [periodes, setPeriodes] = useState<PeriodeOption[]>([]);
   const [indicateurs, setIndicateurs] = useState<IndicateurOption[]>([]);
-  const [indicateur, setIndicateur] = useState<string>(''); // id de l’indicateur sélectionné
+  const [indicateur, setIndicateur] = useState<string>(''); 
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -48,7 +48,10 @@ const CreateObjectifPage: React.FC = () => {
     const fetchPeriodes = async () => {
       try {
         const response = await api.get('/periodes/');
-        setPeriodes(response.data);
+        const periodesEnCours = response.data.filter(
+          (p: PeriodeOption) => p.statut_periode === 'en_cours'
+        );
+        setPeriodes(periodesEnCours);
       } catch (error) {
         console.error('Erreur chargement périodes', error);
       }
@@ -70,9 +73,8 @@ const CreateObjectifPage: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Validation simple côté front
     if (!libelle || !typeKpi || !cible || !poids || !periode) {
-      alert('Veuillez remplir tous les champs.');
+      alert('Veuillez remplir tous les champs obligatoires.');
       return;
     }
 
@@ -81,22 +83,24 @@ const CreateObjectifPage: React.FC = () => {
     const payload: any = {
       libelle,
       type_kpi: typeKpi,
-      cible,
+      cible: parseFloat(cible),
       poids: parseFloat(poids),
       periode,
     };
 
-    if (indicateur) {
-      payload.indicateur = indicateur;
-    }
+    if (indicateur) payload.indicateur = indicateur;
 
     try {
       await api.post('/objectifs/', payload);
       alert('Objectif créé avec succès !');
       navigate('/objectifs');
-    } catch (error) {
-      console.error('Erreur lors de la création de l’objectif :', error);
-      alert('Une erreur est survenue lors de la création de l’objectif.');
+    } catch (error: any) {
+      console.error('Erreur création objectif :', error);
+      if (error.response && error.response.data.periode) {
+        alert(error.response.data.periode);
+      } else {
+        alert('Une erreur est survenue lors de la création de l’objectif.');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,10 +108,7 @@ const CreateObjectifPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
-      {/* --- SIDEBAR --- */}
-      <Sidebar mobileOpen={false} handleDrawerToggle={() => { }} />
-
-      {/* --- CONTENU PRINCIPAL --- */}
+      <Sidebar mobileOpen={false} handleDrawerToggle={() => {}} />
       <Box
         component="main"
         sx={{
@@ -117,40 +118,22 @@ const CreateObjectifPage: React.FC = () => {
           flexDirection: 'column',
         }}
       >
-        {/* --- TOPBAR --- */}
-        <Topbar title="Créer un Objectif" handleDrawerToggle={() => { }} />
+        <Topbar title="Créer un Objectif" handleDrawerToggle={() => {}} />
 
-        {/* --- FORMULAIRE --- */}
         <Box sx={{ mt: { xs: '120px', md: '80px' }, p: { xs: 2, md: 4 } }}>
           <Paper
             elevation={3}
-            sx={{
-              p: { xs: 3, md: 5 },
-              borderRadius: 3,
-              maxWidth: 800,
-              mx: 'auto',
-              backgroundColor: '#fff',
-            }}
+            sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, maxWidth: 800, mx: 'auto', backgroundColor: '#fff' }}
           >
-            <Typography
-              variant="h5"
-              sx={{
-                mb: 4,
-                color: '#0f172a',
-                fontWeight: 'bold',
-                textAlign: 'center',
-              }}
-            >
+            <Typography variant="h5" sx={{ mb: 4, color: '#0f172a', fontWeight: 'bold', textAlign: 'center' }}>
               📝 Créer un nouvel objectif
             </Typography>
 
             <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
-                {/* Libellé */}
                 <Grid item xs={12}>
                   <TextField
                     label="Libellé"
-                    name="libelle"
                     fullWidth
                     required
                     value={libelle}
@@ -158,11 +141,9 @@ const CreateObjectifPage: React.FC = () => {
                   />
                 </Grid>
 
-                {/* Type KPI & Cible */}
-                <Grid item xs={12} md={12}>
+                <Grid item xs={12}>
                   <TextField
                     label="Type KPI"
-                    name="type_kpi"
                     fullWidth
                     required
                     select
@@ -178,20 +159,17 @@ const CreateObjectifPage: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Cible"
-                    name="cible"
                     fullWidth
                     required
-                    type='number'
+                    type="number"
                     value={cible}
                     onChange={(e) => setCible(e.target.value)}
                   />
                 </Grid>
 
-                {/* Poids */}
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Poids"
-                    name="poids"
                     fullWidth
                     required
                     type="number"
@@ -200,7 +178,6 @@ const CreateObjectifPage: React.FC = () => {
                   />
                 </Grid>
 
-                {/* Période */}
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Période"
@@ -211,6 +188,11 @@ const CreateObjectifPage: React.FC = () => {
                     value={periode}
                     onChange={(e) => setPeriode(e.target.value)}
                   >
+                    {periodes.length === 0 && (
+                      <MenuItem value="">
+                        <em>Aucune période en cours disponible</em>
+                      </MenuItem>
+                    )}
                     {periodes.map((p) => (
                       <MenuItem key={p.id} value={p.id}>
                         {p.libelle_periode}
@@ -219,7 +201,6 @@ const CreateObjectifPage: React.FC = () => {
                   </TextField>
                 </Grid>
 
-                {/* Indicateur stratégique */}
                 <Grid item xs={12}>
                   <TextField
                     label="Indicateur stratégique"
@@ -240,26 +221,15 @@ const CreateObjectifPage: React.FC = () => {
                   </TextField>
                 </Grid>
 
-                {/* Bouton centré */}
                 <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
                   <Button
                     type="submit"
                     variant="contained"
                     startIcon={<AddIcon />}
-                    sx={{
-                      bgcolor: '#1976d2',
-                      '&:hover': { bgcolor: '#115293' },
-                      borderRadius: 2,
-                      px: 4,
-                      py: 1,
-                    }}
+                    sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#115293' }, borderRadius: 2, px: 4, py: 1 }}
                     disabled={loading}
                   >
-                    {loading ? (
-                      <CircularProgress size={24} color="inherit" />
-                    ) : (
-                      'Créer l’objectif'
-                    )}
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Créer l’objectif'}
                   </Button>
                 </Grid>
               </Grid>

@@ -17,13 +17,23 @@ class Indicateur(models.Model):
 
 
 class Periode(models.Model):
+    STATUT_CHOICES = [
+        ('en_cours', 'En cours'),
+        ('terminee', 'Terminée'),
+    ]
+
     libelle_periode = models.CharField(max_length=100)
     date_debut = models.DateField()
     date_fin = models.DateField()
-    est_active = models.BooleanField(default=False)  # ✅ ajoute ceci
+    statut_periode = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_cours'
+    )
 
     def __str__(self):
         return self.libelle_periode
+
 
 
 
@@ -74,7 +84,13 @@ class Objectif(models.Model):
         null=True, blank=True
     )
 
-    periode = models.ForeignKey(Periode, on_delete=models.CASCADE)
+    periode = models.ForeignKey(
+        Periode,
+        on_delete=models.CASCADE,
+        limit_choices_to={'statut_periode': 'en_cours'},
+        verbose_name="Période"
+    )
+
     statut = models.CharField(
         max_length=20,
         choices=STATUT_CHOICES,
@@ -112,6 +128,12 @@ class Objectif(models.Model):
         null=True,
         blank=True
     )
+
+    def save(self, *args, **kwargs):
+        if self.periode.statut_periode != 'en_cours':
+            raise ValueError("Impossible de créer un objectif : la période n'est pas en cours.")
+        super().save(*args, **kwargs)
+
 
 class PlanStrategique(models.Model):
     titre = models.CharField(max_length=255)

@@ -104,6 +104,11 @@ class ObjectifViewSet(viewsets.ModelViewSet):
 
         serializer.save(agent=agent, service=service, annee=annee)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['periodes_en_cours'] = Periode.objects.filter(statut_periode='en_cours')
+        return context
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         user = request.user

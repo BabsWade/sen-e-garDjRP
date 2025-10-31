@@ -101,6 +101,12 @@ class ObjectifSerializer(serializers.ModelSerializer):
         """Retourne True si l’objectif est rejeté."""
         return obj.statut == 'rejete'
 
+    def validate_periode(self, value):
+        if value.statut_periode != 'en_cours':
+            raise serializers.ValidationError(
+                "Impossible de créer ou modifier un objectif : la période n'est pas en cours.")
+        return value
+
 class AgentPerformanceSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(
         source='service.nom_service',
