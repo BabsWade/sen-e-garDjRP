@@ -37,6 +37,9 @@ import SubordonneesObjectifs from './pages/SubordonneesObjectifs';
 import ObjectifSubordonnees from './pages/ObjectifSubordonnees';
 import InfosObjectif from './pages/InfosObjectif';
 import ObjectifsSousResponsable from './pages/ObjectifsSousResponsable';
+import PerformancePeriode from './pages/PerformancePeriode';
+import HistoriqueEvaluations from './pages/HistoriqueEvaluations';
+import TauxRealisations from './pages/TauxRealisations';
 
 const App: React.FC = () => {
   return (
@@ -77,11 +80,23 @@ const App: React.FC = () => {
           element={<PrivateRoute element={<ObjectifsListNplus1 />} roles={['RESPONSABLE_N1']} />}
         />
 
-        <Route
-          path="/objectifdetailsnplus1/:id"
-          element={<PrivateRoute element={<ObjectifDetailsNplus1 />} roles={['RESPONSABLE_N1']} />}
+<Route
+          path="/objectifslistnplus1"
+          element={<PrivateRoute element={<ObjectifsListNplus1 />} roles={['RESPONSABLE_N1']} />}
         />
 
+        <Route
+          path="/agent/historique-performance/"
+          element={<PrivateRoute element={<PerformancePeriode />} roles={['RESPONSABLE_N1', 'AGENT']} />}
+        />
+               <Route path="/taux-realisations/:id" element={<TauxRealisations />} />
+
+
+
+<Route
+          path="/historique-evaluations/"
+          element={<PrivateRoute element={<HistoriqueEvaluations />} roles={['RESPONSABLE_N1', 'AGENT']} />}
+        />
 
         <Route
           path="/drh-dashboard"

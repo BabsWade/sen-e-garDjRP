@@ -14,7 +14,6 @@ import {
   TableCell,
   TableBody,
   Button,
-  LinearProgress,
   List,
   ListItem,
   ListItemText,
@@ -26,13 +25,13 @@ import StarIcon from '@mui/icons-material/Star';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import type { minWidth } from '@mui/system';
 
 interface NoteFinale {
   note_finale: number;
   commentaire: string;
   date_valuation: string;
   date_soumission: string;
+  performance_ponderee?: number;
 }
 
 interface Objectif {
@@ -53,6 +52,11 @@ interface Notification {
   lu: boolean;
 }
 
+interface TauxRealisation {
+  taux_realisations_valides: number;
+  date_calcul: string;
+}
+
 const AgentDashboard: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [objectifsAtteints, setObjectifsAtteints] = useState(0);
@@ -62,25 +66,21 @@ const AgentDashboard: React.FC = () => {
   const [objectifs, setObjectifs] = useState<Objectif[]>([]);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [historique, setHistorique] = useState<any[]>([]);
+  const [tauxHistorique, setTauxHistorique] = useState<TauxRealisation[]>([]);
   const [noteFinale, setNoteFinale] = useState<NoteFinale | null>(null);
   const [periodeEnCours, setPeriodeEnCours] = useState('Aucune');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const navigate = useNavigate();
   const [showAllObjectifs, setShowAllObjectifs] = useState(false);
   const [showAllNotifs, setShowAllNotifs] = useState(false);
-  const historiqueTrie = [...historique].sort(
-    (a, b) => new Date(a.date_calcul) - new Date(b.date_calcul)
-  );
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  const handleVoirDetails = (id: number) => {
-    navigate(`/objectifs/${id}`);
-  };
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleVoirDetails = (id: number) => navigate(`/objectifs/${id}`);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Récupération des infos principales
+        // --- Données principales
         const perfResp = await api.get('/dashboard-agent/');
         const data = perfResp.data;
 
@@ -90,22 +90,22 @@ const AgentDashboard: React.FC = () => {
         setObjectifsAtteints(data.objectifs_atteints || 0);
         setTotalObjectifs(data.total_objectifs || 0);
 
-        // On récupère les autres données
-        const [objRes, notifRes, fbRes, histRes, noteRes] = await Promise.all([
+        // --- Récupération en parallèle
+        const [objRes, notifRes, fbRes, histRes, noteRes, tauxRes] = await Promise.all([
           api.get('/agent-objectifs/'),
           api.get('/notifications/'),
           api.get('/agent-feedbacks/'),
           api.get('/agent-historique-performances/'),
-          api.get('/note-finales/'),
+          api.get('/derniere-evaluation/'),
+          api.get(`/accounts/taux-realisations/${data.id}/`), // ← ajout du taux de réalisations
         ]);
 
         setObjectifs(objRes.data);
         setNotifications(notifRes.data);
         setFeedbacks(fbRes.data);
         setHistorique(histRes.data);
-
-        if (noteRes.data && noteRes.data.length > 0) setNoteFinale(noteRes.data[0]);
-
+        setTauxHistorique(tauxRes.data);
+        if (noteRes.data) setNoteFinale(noteRes.data);
       } catch (err) {
         console.error(err);
       }
@@ -113,11 +113,13 @@ const AgentDashboard: React.FC = () => {
 
     fetchDashboardData();
   }, []);
-  console.table(historique.map(h => ({
-    date: h.date_calcul,
-    taux: h.taux_realisations_valides
-  })))
 
+  console.table(
+    tauxHistorique.map((t) => ({
+      date: t.date_calcul,
+      taux: t.taux_realisations_valides,
+    }))
+  );
 
   return (
     <Box sx={{ display: 'flex', bgcolor: '#f6f8fc', minHeight: '100vh' }}>
@@ -136,7 +138,7 @@ const AgentDashboard: React.FC = () => {
           gap: 3,
         }}
       >
-        {/* Cartes colorées */}
+        {/* --- Cartes d'information --- */}
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ bgcolor: '#d2ffd8', textAlign: 'center', p: 2 }}>
@@ -150,11 +152,9 @@ const AgentDashboard: React.FC = () => {
           <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ bgcolor: '#fcffb8', textAlign: 'center', p: 2 }}>
               <StarIcon sx={{ fontSize: 40, color: '#fbc02d' }} />
-              <Typography>Dernière note finale</Typography>
+              <Typography>Note dernière évaluation</Typography>
               <Typography variant="h4">
-
-                {noteFinale ? Number(noteFinale.note_finale).toFixed(2) + '%' : '—'}
-
+                {noteFinale ? Number(noteFinale.performance_ponderee).toFixed(2) + '%' : '—'}
               </Typography>
             </Card>
           </Grid>
@@ -167,33 +167,35 @@ const AgentDashboard: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* Graphique et Tableau des objectifs côte à côte */}
-        <Grid container spacing={2} >
+        {/* --- Graphique + notifications --- */}
+        <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 7 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Évolution de ma performance et de mes réalisations
                 </Typography>
+
+                {/* 🔹 Graphique combiné (performance + taux de réalisations validées) */}
                 <Line
                   data={{
-
-                    labels: historique.map((h) => new Date(h.date_calcul).toLocaleDateString()),
+                    labels: historique.map((h) =>
+                      new Date(h.date_calcul).toLocaleDateString()
+                    ),
                     datasets: [
                       {
-                        label: 'Performance (%)',
+                        label: 'Performance pondérée (%)',
                         data: historique.map((h) => h.performance),
-                        borderColor: '#1976d2',
+                        borderColor: '#1976d2', // bleu
                         backgroundColor: 'rgba(25, 118, 210, 0.2)',
                         tension: 0.3,
                         fill: false,
                       },
                       {
                         label: 'Taux de réalisations validées (%)',
-                        // On utilise directement le taux actuel de l'agent pour chaque point
-                        data: historique.map(() => agent?.taux_realisations_valides || 0),
-                        borderColor: '#ff9800',
-                        backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                        data: tauxHistorique.map((t) => t.taux_realisations_valides),
+                        borderColor: '#E53935', // rouge
+                        backgroundColor: 'rgba(229, 57, 53, 0.2)',
                         tension: 0.3,
                         fill: false,
                       },
@@ -201,45 +203,32 @@ const AgentDashboard: React.FC = () => {
                   }}
                   options={{
                     responsive: true,
-                    plugins: {
-                      legend: {
-                        position: 'top',
-                      },
-                    },
+                    plugins: { legend: { position: 'top' } },
                     scales: {
                       y: {
                         beginAtZero: true,
                         max: 100,
-                        title: {
-                          display: true,
-                          text: 'Pourcentage (%)',
-                        },
+                        title: { display: true, text: 'Pourcentage (%)' },
                       },
                       x: {
-                        title: {
-                          display: true,
-                          text: 'Date',
-                        },
+                        title: { display: true, text: 'Date' },
                       },
                     },
                   }}
                 />
-
               </CardContent>
             </Card>
           </Grid>
 
-
+          {/* --- Notifications --- */}
           <Grid size={{ xs: 12, md: 5 }}>
             <Card>
               <CardContent>
-
                 <Typography variant="h6">Mes notifications</Typography>
                 {notifications.length === 0 ? (
                   <Typography>Aucune notification.</Typography>
                 ) : (
                   <List>
-
                     {notifications.slice(0, showAllNotifs ? notifications.length : 4).map((notif) => (
                       <React.Fragment key={notif.id}>
                         <ListItem>
@@ -263,15 +252,16 @@ const AgentDashboard: React.FC = () => {
           </Grid>
         </Grid>
 
-
+        {/* --- Tableau des objectifs --- */}
         <Grid item xs={12} md={6}>
-          {/* Tableau des objectifs */}
-          <Card sx={{
-            p: 3,
-            height: '100%', // Pour s'assurer que le Card prend toute la hauteur disponible
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
+          <Card
+            sx={{
+              p: 3,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Mes objectifs
@@ -317,7 +307,7 @@ const AgentDashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* Feedbacks et notifications côte à côte */}
+        {/* --- Feedbacks --- */}
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <Card>
@@ -345,8 +335,6 @@ const AgentDashboard: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-
-
         </Grid>
       </Box>
     </Box>

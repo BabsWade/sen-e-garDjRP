@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Agent, HistoriquePerformance
+from .models import Agent, HistoriquePerformance, HistoriqueTauxRealisations
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
@@ -129,6 +129,14 @@ class HistoriquePerformanceSerializer(serializers.ModelSerializer):
         total = objectifs.count()
         valides = objectifs.filter(taux_avancement__gte=100).count()
         return round(valides / total * 100, 2) if total else 0
+
+class HistoriqueTauxRealisationsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoriqueTauxRealisations
+        fields = ['agent', 'taux_realisations_valides', 'date_calcul']
+
+
+
 
 class AgentDetailSerializer(serializers.ModelSerializer):
     service_nom = serializers.CharField(source='service.nom_service', read_only=True)

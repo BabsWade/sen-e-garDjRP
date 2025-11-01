@@ -32,7 +32,7 @@ const menuItems = [
   { text: 'Auto‑Évaluation', icon: <AssignmentIcon />, to: '/auto-evaluation' },
   { text: 'Évaluation Finale', icon: <PeopleIcon />, to: '/evaluation' },
   { text: 'Contester Évaluation', icon: <BarChartIcon />, to: '/contestation' },
-  { text: 'Historique de performance', icon: <SettingsIcon />, to: '/historique' },
+  { text: 'Historique de performance', icon: <SettingsIcon />, to: '/historique-evaluations/' },
   { text: 'Mon Profil', icon: <PeopleIcon />, to: '/profil' },
   { text: 'Notifications', icon: <SettingsIcon />, to: '/notifications' },
   { text: 'Aide / Support', icon: <SettingsIcon />, to: '/aide-support' },

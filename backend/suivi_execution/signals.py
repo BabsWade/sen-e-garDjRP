@@ -234,3 +234,15 @@ def maj_historique_taux_execution(sender, instance, **kwargs):
                 'taux_realisations_objectifs_valides': taux
             }
         )
+
+@receiver(post_save, sender=Realisation)
+def mettre_a_jour_taux_realisations(sender, instance, created, **kwargs):
+    """
+    À chaque création ou mise à jour d'une réalisation validée,
+    on met à jour l'historique du taux de réalisations validées.
+    """
+    # Ne traiter que les réalisations validées
+    if instance.est_valide:
+        agent = instance.objectif.agent  # Assure-toi que Objectif a un champ `agent`
+        if agent:
+            agent.enregistrer_taux()  # la méthode progressive que l'on a définie

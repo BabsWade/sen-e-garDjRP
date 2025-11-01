@@ -15,6 +15,8 @@ from planification_alignement.models import PlanStrategique, ObjectifProgramme
 
 from suivi_execution.models import Notification
 
+from evaluation.models import HistoriqueEvaluation
+
 
 # accounts/admin.py
 
@@ -217,3 +219,20 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ('agent__nom', 'agent__prenom', 'message')
     readonly_fields = ('date_envoi', 'lue_le')
     ordering = ('-date_envoi',)
+
+@admin.register(HistoriqueEvaluation)
+class HistoriqueEvaluationAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'periode', 'performance_ponderee', 'date_archivage')
+    list_filter = ('periode',)
+    search_fields = ('agent__matricule', 'agent__nom', 'agent__prenom')
+    ordering = ('-date_archivage',)
+
+from django.contrib import admin
+from .models import HistoriqueTauxRealisations
+
+@admin.register(HistoriqueTauxRealisations)
+class HistoriqueTauxRealisationsAdmin(admin.ModelAdmin):
+    list_display = ('agent', 'taux_realisations_valides', 'date_calcul')
+    list_filter = ('agent',)
+    ordering = ('-date_calcul',)
+

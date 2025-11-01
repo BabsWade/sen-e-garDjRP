@@ -6,6 +6,8 @@ from django.db import models
 from accounts.models import Agent  # Assure-toi que l'importation est correcte
 from planification_alignement.models import Objectif  # Lien avec Objectif dans F2
 
+from planification_alignement.models import Periode
+
 
 class Realisation(models.Model):
     """
@@ -37,6 +39,7 @@ class Realisation(models.Model):
     # ✅ Suivi des dates
     date_soumission = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True, null=True)
+    periode = models.ForeignKey(Periode, on_delete=models.CASCADE, null=True, blank=True)  # ✅ Ajout
 
     def valider(self):
         """Valide la réalisation."""
@@ -88,3 +91,4 @@ class HistoriqueTauxExecution(models.Model):
     class Meta:
         ordering = ['date_calcul']
         unique_together = ('agent', 'date_calcul')  # évite les doublons
+

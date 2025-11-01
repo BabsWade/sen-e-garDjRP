@@ -3,8 +3,9 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer, AgentDetailSerializer
-from .models import Agent
+from .serializers import AgentRegisterSerializer, AgentPerformanceSerializer, AgentDetailSerializer, \
+    HistoriqueTauxRealisationsSerializer
+from .models import Agent, HistoriqueTauxRealisations
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .token_serializers import MyTokenObtainPairSerializer
 from django.utils.http import urlsafe_base64_decode
@@ -194,6 +195,27 @@ class AgentHistoriquePerformanceAPIView(APIView):
                 derniere_perf = float(h.performance)
 
         return Response(data)
+
+
+class HistoriqueTauxRealisationsAPIView(APIView):
+    """
+    Retourne l'historique progressif des taux de réalisations validées
+    d'un agent donné.
+    """
+
+    def get(self, request, agent_id, format=None):
+        try:
+            agent = Agent.objects.get(pk=agent_id)
+        except Agent.DoesNotExist:
+            return Response({"error": "Agent introuvable"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Calcul progressif avant de renvoyer l'historique
+        taux_actuel = agent.enregistrer_taux()  # méthode que l’on a définie
+
+        # Récupération de l'historique complet
+        historique = agent.historique_taux.all().order_by('date_calcul')
+        serializer = HistoriqueTauxRealisationsSerializer(historique, many=True)
+        return Response(serializer.data)
 
 
 class SubordonnesListAPIView(APIView):

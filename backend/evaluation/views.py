@@ -1,14 +1,19 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import AutoEvaluation, Evaluation, NoteFinale, Contestation
+from .models import AutoEvaluation, Evaluation, NoteFinale, Contestation, HistoriqueEvaluation
 from .serializers import (
     AutoEvaluationSerializer,
     EvaluationSerializer,
     NoteFinaleSerializer,
     ContestationSerializer,
-    AutoEvaluationReadSerializer
+    AutoEvaluationReadSerializer, HistoriqueEvaluationSerializer
 )
 from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+from accounts.models import archiver_performance_periode
+from rest_framework import generics
 
 
 class AutoEvaluationViewSet(viewsets.ModelViewSet):
@@ -97,3 +102,31 @@ class ContestationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(agent=self.request.user)
+
+class ArchiverEvaluationAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, periode_id):
+        try:
+            message = archiver_performance_periode(periode_id)
+            return Response({"detail": message})
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
+
+class HistoriqueEvaluationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = HistoriqueEvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        agent = self.request.user  # si l'user est un Agent
+        return HistoriqueEvaluation.objects.filter(agent=agent)
+
+class DerniereEvaluationAPIView(generics.RetrieveAPIView):
+    serializer_class = HistoriqueEvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        agent = self.request.user  # agent connecté
+        # On récupère la dernière évaluation terminée
+        derniere_eval = HistoriqueEvaluation.objects.filter(agent=agent).order_by('-periode__date_fin').first()
+        return derniere_eval

@@ -1,7 +1,13 @@
 from django.db import models
-from accounts.models import Agent  # Associer l'évaluation à un agent
+
 from planification_alignement.models import Objectif  # Associer l'évaluation aux objectifs
 from datetime import datetime
+from django.utils import timezone
+
+from planification_alignement.models import Periode
+
+from accounts.models import Agent
+
 
 class AutoEvaluation(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
@@ -53,3 +59,20 @@ class Contestation(models.Model):
 
     def __str__(self):
         return f"Contestation de {self.agent} sur l'évaluation {self.evaluation.id}"
+
+class HistoriqueEvaluation(models.Model):
+    """
+    Archive la performance pondérée d'un agent à la fin d'une période d'évaluation.
+    """
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='evaluations_archivees')
+    periode = models.ForeignKey(Periode, on_delete=models.CASCADE, related_name='evaluations_archivees')
+    performance_ponderee = models.DecimalField(max_digits=5, decimal_places=2)
+    date_enregistrement = models.DateTimeField(default=timezone.now)
+    date_archivage = models.DateTimeField(default=timezone.now)  # <-- bien présent
+
+    class Meta:
+        ordering = ['-date_enregistrement']
+        unique_together = ('agent', 'periode')  # Un seul enregistrement par agent et période
+
+    def __str__(self):
+        return f"Évaluation {self.periode.libelle_periode} - {self.agent} : {self.performance_ponderee}%"

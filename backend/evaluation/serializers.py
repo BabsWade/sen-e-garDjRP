@@ -1,6 +1,6 @@
 # evaluation/serializers.py
 from rest_framework import serializers
-from .models import AutoEvaluation, Evaluation, NoteFinale, Contestation
+from .models import AutoEvaluation, Evaluation, NoteFinale, Contestation, HistoriqueEvaluation
 from rest_framework.exceptions import ValidationError
 
 class AutoEvaluationSerializer(serializers.ModelSerializer):
@@ -73,3 +73,11 @@ class ContestationSerializer(serializers.ModelSerializer):
         model = Contestation
         fields = '__all__'
         read_only_fields = ['agent']
+
+class HistoriqueEvaluationSerializer(serializers.ModelSerializer):
+    agent_nom = serializers.CharField(source='agent.nom', read_only=True)
+    periode_libelle = serializers.CharField(source='periode.libelle_periode', read_only=True)
+
+    class Meta:
+        model = HistoriqueEvaluation
+        fields = ['id', 'agent', 'agent_nom', 'periode', 'periode_libelle', 'performance_ponderee', 'date_enregistrement']
